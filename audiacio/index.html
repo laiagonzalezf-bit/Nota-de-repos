@@ -123,13 +123,14 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
 
   <section class="stage" id="stage" aria-live="polite">
     <div class="big">Prem Nova ronda</div>
-    <div class="sub">Sonarà la tonalitat (I–V7–I) i un patró. Cal permetre el micròfon. Si pots, fes servir auriculars.</div>
+    <div class="sub">Sonarà la tonalitat (I–V7–I) un sol cop i després els patrons, l'un darrere l'altre. Cal permetre el micròfon. Si pots, fes servir auriculars.</div>
   </section>
 
   <div class="actions">
     <button class="btn primary" id="bNew">Nova ronda</button>
     <button class="btn" id="bAgain" disabled>Torna a escoltar el patró</button>
-    <button class="btn" id="bRef" disabled>Tonalitat</button>
+    <button class="btn" id="bRef" disabled>Torna a sentir la tonalitat</button>
+    <button class="btn" id="bKey" disabled>Canvia de tonalitat</button>
   </div>
 
   <details>
@@ -146,6 +147,7 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
         <select id="optWait"><option value="0">Sense silenci</option><option value="2">2 s</option><option value="4">4 s</option><option value="6">6 s</option></select></label>
       <div class="field"><span class="lab">Opcions</span>
         <label class="check"><input type="checkbox" id="optAsk"> Pregunta si el patró és de tònica o de dominant</label>
+        <label class="check"><input type="checkbox" id="optAuto"> Encadena el patró següent quan l'encertes</label>
         <label class="check"><input type="checkbox" id="optAbs"> Mostra els noms reals de les notes</label>
       </div>
     </div>
@@ -175,7 +177,7 @@ const LEVELS=[
   {id:5,name:'5 · Barrejat',desc:'Major i menor · 4 notes · 4 s',cfg:{mode:'mix',key:'rand',func:'TD',len:4,wait:4,ask:true}},
   {id:6,name:'6 · Llarg',desc:'Major i menor · 5 notes · 6 s',cfg:{mode:'mix',key:'rand',func:'TD',len:5,wait:6,ask:true}}];
 
-let st={level:1,abs:false,...LEVELS[0].cfg};
+let st={level:1,abs:false,auto:true,...LEVELS[0].cfg};
 let stats={sing:{ok:0,tot:0},func:{ok:0,tot:0}};
 try{const s=JSON.parse(localStorage.getItem('patrons-cfg2')||'null');if(s)Object.assign(st,s);}catch(e){}
 try{const s=JSON.parse(localStorage.getItem('patrons-stats1')||'null');if(s)Object.assign(stats,s);}catch(e){}
@@ -290,19 +292,22 @@ let waited=false;
 async function newRound(){
   audio();stopAll();
   if(!piano&&!waited){waited=true;stage('<div class="big">Carregant el piano…</div>');await Promise.race([pianoReady,new Promise(r=>setTimeout(r,6000))]);}
-  const mode=st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode;
-  const pc=st.key==='rand'?Math.floor(Math.random()*12):+st.key;
+  // La tonalitat es manté durant la sessió: la referència només sona quan comença o quan canvia
+  let needRef=false;
+  if(!sess){sess={mode:st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode,pc:st.key==='rand'?Math.floor(Math.random()*12):+st.key};needRef=true;}
+  const mode=sess.mode,pc=sess.pc;
   const func=st.func==='TD'?(Math.random()<.5?'T':'D'):st.func;
   const prev=round&&round.pat;
   round={mode,pc,func,tonic:57+(pc>9?pc-12:pc),pat:genPattern(mode,func,st.len,prev),sung:[],phase:'listen'};
   $('keyLabel').textContent=keyText();
-  $('bAgain').disabled=$('bRef').disabled=false;$('bNew').textContent='Següent';
-  listenFlow(true);
+  $('bAgain').disabled=$('bRef').disabled=$('bKey').disabled=false;$('bNew').textContent='Següent';
+  listenFlow(needRef);
 }
+let sess=null;
 // Escolta (referència + patró) → silenci → canta
 function listenFlow(withRef){
   stopAll();setPhase(1);round.sung=[];
-  stage('<div class="big">Escolta</div>'+slotsHtml(round.pat.length)+'<div class="sub">'+(withRef?'Primer la tonalitat, després el patró.':'El patró un altre cop.')+'</div>');
+  stage('<div class="big">Escolta</div>'+slotsHtml(round.pat.length)+'<div class="sub">'+(withRef?'Primer la tonalitat, després el patró.':'')+'</div>');
   const t0=ctx.currentTime+.1;let t=0;
   if(withRef)t=playRefAt(t0)+.5;
   const d=playPatternAt(t0+t,true);
@@ -377,9 +382,12 @@ function reveal(){
   let extra='';
   if(round.sung.length&&!round.singOk)extra='<div class="sub">Has cantat: <strong>'+round.sung.map(p=>solfa(p,round.mode)).join(' – ')+'</strong></div>';
   if(round.funcOk===false)extra+='<div class="sub">La funció era una altra.</div>';
+  const auto=st.auto&&round.singOk&&round.funcOk!==false;
+  if(auto)extra+='<div class="sub">El següent patró sona de seguida…</div>';
   stage(head+solHtml()+'<div>'+f+'</div>'+extra+'<div class="choice"><button class="btn" id="bHear">Escolta\'l</button><button class="btn" id="bRetry">Torna a cantar</button></div>');
   $('bHear').onclick=()=>{audio();stopAll();playPatternAt(ctx.currentTime+.1,false);};
-  $('bRetry').onclick=()=>{round.funcOk=undefined;round.sung=[];silencePhase();};
+  $('bRetry').onclick=()=>{stopAll();round.funcOk=undefined;round.sung=[];silencePhase();};
+  if(auto)at(2.2,()=>newRound());
 }
 
 function renderStats(){$('sSing').textContent=stats.sing.ok+'/'+stats.sing.tot;$('sFunc').textContent=stats.func.ok+'/'+stats.func.tot;}
@@ -387,7 +395,7 @@ function renderLevels(){
   const R=$('levels');R.innerHTML='';
   LEVELS.forEach(l=>{const b=document.createElement('button');b.className='lv';b.setAttribute('aria-pressed',st.level===l.id);
     b.innerHTML='<b>'+l.name+'</b><small>'+l.desc+'</small>';
-    b.onclick=()=>{stopAll();Object.assign(st,JSON.parse(JSON.stringify(l.cfg)),{level:l.id});save();round=null;setPhase(0);
+    b.onclick=()=>{stopAll();Object.assign(st,JSON.parse(JSON.stringify(l.cfg)),{level:l.id});save();round=null;sess=null;setPhase(0);$('bKey').disabled=true;
       sync();renderLevels();$('keyLabel').textContent=keyText();$('bAgain').disabled=$('bRef').disabled=true;$('bNew').textContent='Nova ronda';
       stage('<div class="big">Nivell '+l.name.replace(/^\d · /,'').toLowerCase()+'</div><div class="sub">'+l.desc+'. Prem <strong>Nova ronda</strong>.</div>');};
     R.appendChild(b);});
@@ -399,9 +407,12 @@ function sync(){
   $('optMode').value=st.mode;$('optKey').value=st.key;$('optFunc').value=st.func;$('optLen').value=String(st.len);
   $('optWait').value=String(st.wait);$('optAsk').checked=st.ask;$('optAbs').checked=st.abs;
 }
-$('optKey').innerHTML='<option value="rand">Aleatòria a cada ronda</option>'+NAMES.map((n,i)=>'<option value="'+i+'">'+n+'</option>').join('');
-$('optMode').onchange=e=>{st.mode=e.target.value;custom();};
-$('optKey').onchange=e=>{st.key=e.target.value;custom();};
+$('optKey').innerHTML='<option value="rand">Aleatòria (es manté fins que la canviïs)</option>'+NAMES.map((n,i)=>'<option value="'+i+'">'+n+'</option>').join('');
+$('optMode').onchange=e=>{st.mode=e.target.value;sess=null;custom();};
+$('optKey').onchange=e=>{st.key=e.target.value;sess=null;custom();};
+$('optAuto').checked=st.auto;
+$('optAuto').onchange=e=>{st.auto=e.target.checked;save();};
+$('bKey').onclick=()=>{sess=null;newRound();};
 $('optFunc').onchange=e=>{st.func=e.target.value;custom();};
 $('optLen').onchange=e=>{st.len=+e.target.value;custom();};
 $('optWait').onchange=e=>{st.wait=+e.target.value;custom();};
