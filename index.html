@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}img{max-width:100%}</style>
+<title>On és el repòs?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: una sola columna; la "escala" de graus és l'instrument central, nivell a dalt, controls a sota */
+:root{
+  --bg:#f3f1ec; --surface:#fffdf8; --ink:#1d2433; --muted:#5f6675; --line:#d9d5cb;
+  --accent:#c2591c; --accent-soft:#f6dfcf; --tonic:#23506b; --tonic-soft:#d6e5ee;
+  --chrom:#6b4c8a; --chrom-soft:#ebe2f3;
+  --ok:#2f7d4f; --ok-soft:#d8eedf; --bad:#b33a3a; --bad-soft:#f4d9d9;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171e; --surface:#1c2029; --ink:#ece8df; --muted:#9ba1ad; --line:#2f3440;
+  --accent:#ef8a4c; --accent-soft:#3c2a1f; --tonic:#7fb5d4; --tonic-soft:#1d3240;
+  --chrom:#c4a6e4; --chrom-soft:#2c2338;
+  --ok:#6cc890; --ok-soft:#1c3326; --bad:#ee7b7b; --bad-soft:#3d2224; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171e; --surface:#1c2029; --ink:#ece8df; --muted:#9ba1ad; --line:#2f3440;
+  --accent:#ef8a4c; --accent-soft:#3c2a1f; --tonic:#7fb5d4; --tonic-soft:#1d3240;
+  --chrom:#c4a6e4; --chrom-soft:#2c2338;
+  --ok:#6cc890; --ok-soft:#1c3326; --bad:#ee7b7b; --bad-soft:#3d2224; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(1.7rem,6vw,2.3rem);line-height:1.05;margin:0;letter-spacing:-.02em;text-wrap:balance}
+header p{margin:.4rem 0 0;color:var(--muted);max-width:60ch}
+
+.levels{display:flex;flex-direction:column;gap:8px}
+.levels>span{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.lvrow{display:flex;flex-wrap:wrap;gap:6px}
+.lv{appearance:none;font:inherit;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;
+  padding:.45rem .75rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;text-align:left}
+.lv b{font-family:var(--display);font-size:.95rem}
+.lv small{font-size:.72rem;color:var(--muted)}
+.lv[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.lv:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.status{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.key{font-family:var(--display);font-weight:700;font-size:1.15rem}
+.score{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.95rem}
+.score b{color:var(--ink)}
+.msg{min-height:3em;font-size:1.05rem}
+.msg strong{font-family:var(--display)}
+.msg.ok strong{color:var(--ok)} .msg.bad strong{color:var(--bad)}
+
+.ladder{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;align-items:end}
+.deg{appearance:none;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;
+  font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;
+  padding:8px 0 10px;transition:transform .12s, background .15s, border-color .15s, box-shadow .15s;min-width:0}
+.deg .n{font-family:var(--display);font-weight:800;font-size:clamp(1.3rem,5.5vw,1.9rem);line-height:1}
+.deg .s{font-size:.72rem;color:var(--muted)}
+.deg .nm{font-size:.68rem;color:var(--muted);opacity:.85;min-height:1em}
+.deg.tonic{border-color:var(--tonic);background:var(--tonic-soft)}
+.deg.tonic .n{color:var(--tonic)}
+.chromrow{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.chromrow .deg{padding:6px 0 7px;border-style:dashed;border-color:var(--chrom)}
+.chromrow .deg .n{font-size:clamp(1.05rem,4.5vw,1.35rem);color:var(--chrom)}
+.chromlabel{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:-12px 0 -16px}
+.deg:hover:not(:disabled){border-color:var(--accent)}
+.deg:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.deg:disabled{cursor:default}
+.deg.off{opacity:.35}
+.deg.lit{background:var(--accent);border-color:var(--accent);border-style:solid;transform:translateY(-6px)}
+.deg.lit .n,.deg.lit .s,.deg.lit .nm{color:var(--surface)}
+.deg.right{background:var(--ok-soft);border-color:var(--ok);box-shadow:0 0 0 2px var(--ok) inset}
+.deg.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.deg.lit.right,.deg.lit.wrong{background:var(--accent);border-color:var(--accent)}
+.hint{font-size:.82rem;color:var(--muted);margin:-10px 0 0}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;font:inherit;font-weight:700;border-radius:999px;padding:.7rem 1.2rem;cursor:pointer;
+  border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+details{border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.05rem}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>span{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--line);border-radius:8px;padding:.25rem .55rem;cursor:pointer;font-variant-numeric:tabular-nums;background:var(--surface)}
+.chip input,.check input{accent-color:var(--accent)}
+.check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.check input{width:18px;height:18px;flex:none}
+
+.stats h2{font-family:var(--display);font-size:1.05rem;margin:0 0 10px}
+.bars{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;align-items:end;height:90px}
+.bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}
+.bar i{display:block;width:100%;max-width:34px;background:var(--accent-soft);border-radius:4px 4px 0 0;position:relative;min-height:2px}
+.bar i b{position:absolute;inset:auto 0 0 0;background:var(--accent);border-radius:4px 4px 0 0}
+.bar.chr i{background:var(--chrom-soft)} .bar.chr i b{background:var(--chrom)}
+.bar span{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stats p{font-size:.82rem;color:var(--muted);margin:8px 0 0}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:.82rem;cursor:pointer;padding:0}
+@media (prefers-reduced-motion:reduce){.deg{transition:none}.deg.lit{transform:none}}
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <h1>On és el repòs?</h1>
+    <p>Escolta la referència de la tonalitat, després una nota sola. Digues quin grau és. En respondre, sentiràs el camí més curt d'aquella nota fins a la tònica.</p>
+  </header>
+
+  <div class="levels">
+    <span>Nivell</span>
+    <div class="lvrow" id="levels"></div>
+  </div>
+
+  <div class="status">
+    <div class="key" id="keyLabel">Tonalitat: —</div>
+    <div class="score"><b id="sOk">0</b>/<span id="sTot">0</span> encerts · ratxa <b id="sStreak">0</b></div>
+  </div>
+
+  <div class="msg" id="msg">Tria un nivell i prem <strong>Nova nota</strong> (cal tenir el so activat).</div>
+
+  <div class="ladder" id="ladder" aria-label="Graus de l'escala"></div>
+  <div class="chromlabel" id="chromLabel" hidden>Cromàtiques</div>
+  <div class="chromrow" id="chromRow" hidden aria-label="Graus cromàtics"></div>
+  <p class="hint">Teclat: 1–7 per respondre · espai per a la següent · R per repetir la nota</p>
+
+  <div class="actions">
+    <button class="btn primary" id="bNext">Nova nota</button>
+    <button class="btn" id="bNote" disabled>Repeteix la nota</button>
+    <button class="btn" id="bRef" disabled>Referència</button>
+    <button class="btn" id="bPath" disabled>Torna a sentir el camí</button>
+  </div>
+
+  <details>
+    <summary>Configuració personalitzada</summary>
+    <div class="settings">
+      <label class="field"><span>Mode</span>
+        <select id="optMode">
+          <option value="major">Major</option>
+          <option value="minor">Menor harmònica</option>
+          <option value="minorNat">Menor natural</option>
+          <option value="mix">Barrejat (major / menor harmònica)</option>
+        </select></label>
+      <label class="field"><span>Tonalitat</span>
+        <select id="optKey"></select></label>
+      <label class="field"><span>Referència</span>
+        <select id="optRef">
+          <option value="cad">Cadència I–IV–V–I</option>
+          <option value="scale">Escala ascendent</option>
+          <option value="chord">Acord de tònica</option>
+        </select></label>
+      <div class="field"><span>Graus diatònics que poden sortir</span>
+        <div class="chips" id="optDegs"></div></div>
+      <div class="field"><span>Opcions</span>
+        <label class="check"><input type="checkbox" id="optChrom"> Notes cromàtiques</label>
+        <label class="check"><input type="checkbox" id="optOct"> Registre variable (octava avall o amunt)</label>
+        <label class="check"><input type="checkbox" id="optDrone"> Bordó de tònica mentre respons</label>
+        <label class="check"><input type="checkbox" id="optRefEach"> Referència a cada nota</label>
+      </div>
+    </div>
+  </details>
+
+  <section class="stats">
+    <h2>Encerts per grau</h2>
+    <div class="bars" id="bars"></div>
+    <p>La part fosca de cada barra és el percentatge d'encerts. Les estadístiques es guarden en aquest navegador. <button class="linkbtn" id="bReset">Esborra-les</button></p>
+  </section>
+</main>
+
+<script>
+(function(){
+const NAMES=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
+const SOLFA=['Do','Re','Mi','Fa','Sol','La','Si','Do'];
+const MODES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,11],minorNat:[0,2,3,5,7,8,10]};
+const CHROM={ // semitò → etiqueta, notes fora de l'escala de cada mode
+  major:{1:'♭2',3:'♭3',6:'♯4',8:'♭6',10:'♭7'},
+  minor:{1:'♭2',4:'♮3',6:'♯4',9:'♮6',10:'♭7'},
+  minorNat:{1:'♭2',4:'♮3',6:'♯4',9:'♮6',11:'♮7'}};
+const MODE_LABEL={major:'major',minor:'menor',minorNat:'menor'};
+const LEVELS=[
+  {id:1,name:'1 · Inicial',desc:'Do major · 1, 3, 5',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,3,5],chrom:false,oct:false,drone:true,refEach:true}},
+  {id:2,name:'2 · Bàsic',desc:'Do major · tots els graus',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true}},
+  {id:3,name:'3 · Mitjà',desc:'Qualsevol tonalitat · registre variable',cfg:{mode:'major',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
+  {id:4,name:'4 · Avançat',desc:'Major i menor barrejats',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
+  {id:5,name:'5 · Expert',desc:'+ notes cromàtiques',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:true,oct:true,drone:false,refEach:true}}];
+const $=id=>document.getElementById(id);
+
+let st={level:1,...LEVELS[0].cfg};
+let stats={ok:0,tot:0,streak:0,per:{}};
+try{const s=JSON.parse(localStorage.getItem('repos-cfg2')||'null');if(s)Object.assign(st,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('repos-stats2')||'null');if(s)Object.assign(stats,s);}catch(e){}
+const save=()=>{try{localStorage.setItem('repos-cfg2',JSON.stringify(st));localStorage.setItem('repos-stats2',JSON.stringify(stats));}catch(e){}};
+
+// ---------- àudio ----------
+let ctx,master,droneNodes=null;
+function audio(){
+  if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.5;
+    const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);}
+  if(ctx.state==='suspended')ctx.resume();return ctx;
+}
+const f=m=>440*Math.pow(2,(m-69)/12);
+function tone(m,t,dur,vel=.3){
+  const o1=ctx.createOscillator(),o2=ctx.createOscillator(),g=ctx.createGain(),g2=ctx.createGain(),lp=ctx.createBiquadFilter();
+  o1.type='triangle';o2.type='sine';o1.frequency.value=f(m);o2.frequency.value=f(m)*2;g2.gain.value=.25;
+  lp.type='lowpass';lp.frequency.setValueAtTime(Math.min(f(m)*6,7000),t);lp.frequency.exponentialRampToValueAtTime(Math.max(f(m)*2,400),t+dur);
+  o1.connect(lp);o2.connect(g2);g2.connect(lp);lp.connect(g);g.connect(master);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vel,t+.012);
+  g.gain.exponentialRampToValueAtTime(vel*.45,t+.25);g.gain.setValueAtTime(vel*.45,t+Math.max(.26,dur-.08));
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur+.35);
+  o1.start(t);o2.start(t);o1.stop(t+dur+.4);o2.stop(t+dur+.4);
+}
+function droneOn(tonic){
+  droneOff();if(!st.drone)return;audio();
+  const g=ctx.createGain();g.gain.setValueAtTime(0,ctx.currentTime);g.gain.linearRampToValueAtTime(.06,ctx.currentTime+.8);g.connect(master);
+  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;lp.connect(g);
+  const os=[tonic-24,tonic-17].map(m=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f(m);o.connect(lp);o.start();return o;});
+  droneNodes={g,os};
+}
+function droneOff(){if(!droneNodes||!ctx)return;const {g,os}=droneNodes,t=ctx.currentTime;
+  g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.4);os.forEach(o=>o.stop(t+.5));droneNodes=null;}
+
+// ---------- ronda ----------
+let round=null,timers=[],busy=false;
+const curMode=()=>round?round.mode:(st.mode==='mix'?'major':st.mode);
+const scale=()=>MODES[curMode()];
+function clearTimers(){timers.forEach(clearTimeout);timers=[];}
+function at(sec,fn){timers.push(setTimeout(fn,Math.max(0,sec)*1000));}
+function labelOf(s,mode){mode=mode||curMode();const i=MODES[mode].indexOf(s);return i>=0?String(i+1):CHROM[mode][s];}
+
+function chordMidis(tonic,rootDeg){
+  const sc=scale(),out=[];
+  for(let k=0;k<3;k++){const idx=(rootDeg-1+2*k);let m=tonic+sc[idx%7]+12*Math.floor(idx/7);
+    while(m>tonic+9)m-=12;while(m<tonic-3)m+=12;out.push(m);}
+  out.push(tonic+sc[rootDeg-1]-(sc[rootDeg-1]>6?24:12));return out;
+}
+function playRef(tonic,t0){
+  const rel=x=>t0-ctx.currentTime+x;
+  if(st.ref==='cad'){[1,4,5,1].forEach((d,i)=>chordMidis(tonic,d).forEach(m=>tone(m,t0+i*.7,i===3?1.1:.62,.16)));return 3.3;}
+  if(st.ref==='scale'){const sc=[...scale(),12];sc.forEach((s,i)=>{tone(tonic+s,t0+i*.28,i===7?.7:.26,.28);
+      at(rel(i*.28),()=>light(s,true));at(rel(i*.28+.26),()=>light(s,false));});
+    tone(tonic,t0+2.5,.9,.28);at(rel(2.5),()=>light(0,true));at(rel(3.3),()=>light(0,false));return 3.7;}
+  chordMidis(tonic,1).forEach(m=>tone(m,t0,1.3,.18));return 1.7;
+}
+
+function pool(){
+  const sc=scale();const p=(st.degs.length?st.degs:[1,2,3,4,5,6,7]).map(d=>sc[d-1]);
+  if(st.chrom)Object.keys(CHROM[curMode()]).forEach(s=>p.push(+s));
+  return p;
+}
+function newRound(){
+  audio();clearTimers();
+  const mode=st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode;
+  let pc=st.key==='rand'?Math.floor(Math.random()*12):+st.key;
+  const keyChanged=!round||round.pc!==pc||round.mode!==mode;
+  const tonic=60+(pc>7?pc-12:pc);
+  const prev=round?round.s:undefined;
+  round={pc,tonic,mode,answered:false};
+  const P=pool();let s=P[Math.floor(Math.random()*P.length)];
+  if(P.length>1&&s===prev)s=P[Math.floor(Math.random()*P.length)];
+  let shift=0;if(st.oct){const r=Math.random();shift=r<.25?-12:r>.85?12:0;}
+  Object.assign(round,{s,shift,note:tonic+s+shift});
+  $('keyLabel').textContent='Tonalitat: '+NAMES[pc]+' '+MODE_LABEL[mode];
+  renderLadder();resetLadder();droneOff();
+  const t0=ctx.currentTime+.08;let wait=0;
+  if(st.refEach||keyChanged){setMsg('Escolta la referència…');busy=true;wait=playRef(tonic,t0)+.5;}
+  at(wait,()=>{droneOn(tonic);playNote();busy=false;setMsg('Quin grau era?');enableAnswers(true);});
+  $('bNote').disabled=$('bRef').disabled=false;$('bPath').disabled=true;$('bNext').textContent='Següent';
+}
+function playNote(){if(!round)return;audio();tone(round.note,ctx.currentTime+.05,1.1,.32);}
+
+function answer(s){
+  if(!round||round.answered||busy)return;
+  round.answered=true;enableAnswers(false);
+  const ok=s===round.s,key=labelOf(round.s);
+  stats.tot++;if(ok){stats.ok++;stats.streak++;}else stats.streak=0;
+  const p=stats.per[key]||(stats.per[key]={ok:0,tot:0});p.tot++;if(ok)p.ok++;save();renderStats();
+  btn(round.s).classList.add('right');if(!ok)btn(s).classList.add('wrong');
+  const nm=NAMES[(round.pc+round.s)%12];
+  setMsg((ok?'<strong>Correcte!</strong> Era el '+key:'<strong>No.</strong> Has dit '+labelOf(s)+', era el '+key)+' ('+nm+'). Escolta el camí cap al repòs.',ok?'ok':'bad');
+  playPath();$('bPath').disabled=false;
+}
+// Camí més curt per semitons: fins a 5 semitons baixa a l'1; 6 o més puja al 8.
+// Després de la nota de partida, segueix per les notes de l'escala.
+function pathSemis(s){
+  if(s===0)return [0];
+  const sc=scale();
+  if(s<=5)return [s,...sc.filter(x=>x<s).reverse()];
+  return [s,...sc.filter(x=>x>s),12];
+}
+function playPath(){
+  if(!round)return;audio();clearTimers();
+  const path=pathSemis(round.s),base=round.tonic+round.shift,t0=ctx.currentTime+.15,step=.5;
+  path.forEach((s,i)=>{const last=i===path.length-1,dur=last?1.3:.46;
+    tone(base+s,t0+i*step,dur,last?.34:.28);
+    at(.15+i*step,()=>light(s,true));at(.15+i*step+dur,()=>light(s,false));});
+  chordMidis(round.tonic,1).forEach(m=>tone(m+round.shift,t0+path.length*step+.4,1.4,.12));
+}
+
+// ---------- UI ----------
+function setMsg(h,cls){const m=$('msg');m.innerHTML=h;m.className='msg'+(cls?' '+cls:'');}
+const btn=s=>document.querySelector('.deg[data-s="'+s+'"]');
+function light(s,on){const b=btn(s);if(b)b.classList.toggle('lit',on);}
+function resetLadder(){document.querySelectorAll('.deg').forEach(b=>b.classList.remove('right','wrong','lit'));}
+function enableAnswers(on){document.querySelectorAll('.deg').forEach(b=>{b.disabled=!on||b.dataset.s==='12';});}
+function makeBtn(s,label,sub,h){
+  const b=document.createElement('button');b.className='deg'+(s===0||s===12?' tonic':'');b.dataset.s=s;b.disabled=true;
+  if(h)b.style.height=h+'px';
+  b.innerHTML='<span class="n">'+label+'</span>'+(sub?'<span class="s">'+sub+'</span>':'')+'<span class="nm"></span>';
+  b.setAttribute('aria-label',s===12?'Tònica a l\'octava':'Grau '+label);
+  b.addEventListener('click',()=>answer(s));return b;
+}
+function renderLadder(){
+  const mode=curMode(),sc=MODES[mode],L=$('ladder'),C=$('chromRow');L.innerHTML='';C.innerHTML='';
+  [...sc,12].forEach((s,i)=>{const b=makeBtn(s,String(i+1),SOLFA[i],64+(i+1)*9);
+    if(i<7&&!st.degs.includes(i+1))b.classList.add('off');L.appendChild(b);});
+  Object.entries(CHROM[mode]).forEach(([s,l])=>C.appendChild(makeBtn(+s,l,'',0)));
+  C.hidden=$('chromLabel').hidden=!st.chrom;
+  document.querySelectorAll('.deg').forEach(b=>{b.querySelector('.nm').textContent=round?NAMES[(round.pc+(+b.dataset.s))%12]:'';});
+  enableAnswers(!!(round&&!round.answered&&!busy));
+}
+function renderStats(){
+  $('sOk').textContent=stats.ok;$('sTot').textContent=stats.tot;$('sStreak').textContent=stats.streak;
+  const B=$('bars');B.innerHTML='';
+  const cols=['1','2','3','4','5','6','7'].map(k=>({k,...(stats.per[k]||{ok:0,tot:0})}));
+  const ch={k:'crom.',ok:0,tot:0};Object.entries(stats.per).forEach(([k,v])=>{if(!/^[1-7]$/.test(k)){ch.ok+=v.ok;ch.tot+=v.tot;}});
+  cols.push(ch);
+  cols.forEach((p,i)=>{const pct=p.tot?p.ok/p.tot:0,el=document.createElement('div');el.className='bar'+(i===7?' chr':'');
+    el.innerHTML='<i style="height:'+(p.tot?100:4)+'%"><b style="height:'+(pct*100)+'%"></b></i><span>'+p.k+'<br>'+(p.tot?Math.round(pct*100)+'%':'–')+'</span>';
+    el.title=p.ok+' de '+p.tot;B.appendChild(el);});
+}
+function renderLevels(){
+  const R=$('levels');R.innerHTML='';
+  LEVELS.forEach(l=>{const b=document.createElement('button');b.className='lv';b.setAttribute('aria-pressed',st.level===l.id);
+    b.innerHTML='<b>'+l.name+'</b><small>'+l.desc+'</small>';
+    b.onclick=()=>{Object.assign(st,JSON.parse(JSON.stringify(l.cfg)),{level:l.id});if(!st.drone)droneOff();save();round=null;
+      syncSettings();renderLevels();renderLadder();setMsg('Nivell '+l.name.replace(/^\d · /,'').toLowerCase()+'. Prem <strong>Nova nota</strong>.');
+      $('keyLabel').textContent='Tonalitat: —';$('bNote').disabled=$('bRef').disabled=$('bPath').disabled=true;$('bNext').textContent='Nova nota';};
+    R.appendChild(b);});
+  if(st.level===0){const s=document.createElement('button');s.className='lv';s.setAttribute('aria-pressed','true');s.disabled=true;
+    s.innerHTML='<b>Personalitzat</b><small>la teva configuració</small>';R.appendChild(s);}
+}
+function custom(){st.level=0;save();renderLevels();}
+function syncSettings(){
+  $('optKey').value=st.key;$('optMode').value=st.mode;$('optRef').value=st.ref;
+  $('optChrom').checked=st.chrom;$('optOct').checked=st.oct;$('optDrone').checked=st.drone;$('optRefEach').checked=st.refEach;
+  for(let d=1;d<=7;d++)$('deg'+d).checked=st.degs.includes(d);
+}
+function buildSettings(){
+  $('optKey').innerHTML='<option value="rand">Aleatòria a cada nota</option>'+NAMES.map((n,i)=>'<option value="'+i+'">'+n+'</option>').join('');
+  const D=$('optDegs');
+  for(let d=1;d<=7;d++){const l=document.createElement('label');l.className='chip';
+    l.innerHTML='<input type="checkbox" id="deg'+d+'"> '+d;
+    l.querySelector('input').addEventListener('change',e=>{st.degs=e.target.checked?[...st.degs,d].sort():st.degs.filter(x=>x!==d);custom();renderLadder();});
+    D.appendChild(l);}
+  $('optKey').onchange=e=>{st.key=e.target.value;custom();};
+  $('optMode').onchange=e=>{st.mode=e.target.value;round=null;custom();renderLadder();};
+  $('optRef').onchange=e=>{st.ref=e.target.value;custom();};
+  $('optChrom').onchange=e=>{st.chrom=e.target.checked;custom();renderLadder();};
+  $('optOct').onchange=e=>{st.oct=e.target.checked;custom();};
+  $('optDrone').onchange=e=>{st.drone=e.target.checked;custom();if(!st.drone)droneOff();else if(round&&!round.answered)droneOn(round.tonic);};
+  $('optRefEach').onchange=e=>{st.refEach=e.target.checked;custom();};
+  syncSettings();
+}
+
+$('bNext').onclick=newRound;
+$('bNote').onclick=()=>{if(!busy)playNote();};
+$('bRef').onclick=()=>{if(!round||busy)return;audio();clearTimers();busy=true;const w=playRef(round.tonic,ctx.currentTime+.08);at(w,()=>busy=false);};
+$('bPath').onclick=playPath;
+$('bReset').onclick=()=>{stats={ok:0,tot:0,streak:0,per:{}};save();renderStats();};
+document.addEventListener('keydown',e=>{
+  if(e.target.closest('select,input'))return;
+  if(/^[1-7]$/.test(e.key))answer(scale()[+e.key-1]);
+  else if(e.key===' '){e.preventDefault();newRound();}
+  else if(e.key==='r'||e.key==='R'){if(!busy)playNote();}
+});
+
+buildSettings();renderLevels();renderLadder();renderStats();
+})();
+</script>
+</body>
+</html>
