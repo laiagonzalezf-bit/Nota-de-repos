@@ -76,6 +76,14 @@ header p{margin:.4rem 0 0;color:var(--muted);max-width:60ch}
 .deg.wrong{background:var(--bad-soft);border-color:var(--bad)}
 .deg.lit.right,.deg.lit.wrong{background:var(--accent);border-color:var(--accent)}
 .hint{font-size:.82rem;color:var(--muted);margin:-10px 0 0}
+.sing{border:1.5px solid var(--tonic);background:var(--tonic-soft);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sing-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sing-top b{font-family:var(--display);font-size:1.2rem;color:var(--tonic)}
+.sing-now{font-variant-numeric:tabular-nums;font-size:1rem}
+.sing-now .far{color:var(--muted)}
+.meter{height:10px;border-radius:999px;background:var(--surface);overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;width:0;background:var(--tonic);transition:width .08s linear}
+.sing .btn{align-self:flex-start;padding:.5rem 1rem}
 body.hide-rel .deg .s{display:none}
 body.hide-abs .deg .nm{display:none}
 
@@ -130,6 +138,12 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
 
   <div class="msg" id="msg">Tria un nivell i prem <strong>Nova nota</strong> (cal tenir el so activat).</div>
 
+  <div class="sing" id="sing" hidden>
+    <div class="sing-top"><b>Canta el repòs</b><span class="sing-now" id="singNow">Escoltant…</span></div>
+    <div class="meter" aria-hidden="true"><i id="singBar"></i></div>
+    <button class="btn" id="bSingSkip">Fes-la sonar</button>
+  </div>
+
   <div class="ladder" id="ladder" aria-label="Graus de l'escala"></div>
   <div class="chromlabel" id="chromLabel" hidden>Cromàtiques</div>
   <div class="chromrow" id="chromRow" hidden aria-label="Graus cromàtics"></div>
@@ -151,12 +165,17 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
           <option value="minor">Menor harmònica</option>
           <option value="minorNat">Menor natural</option>
           <option value="mix">Barrejat (major / menor harmònica)</option>
+          <option value="dorian">Dòric</option>
+          <option value="phrygian">Frigi</option>
+          <option value="lydian">Lidi</option>
+          <option value="mixolydian">Mixolidi</option>
+          <option value="modal">Modes barrejats (dòric, frigi, lidi, mixolidi, eòlic)</option>
         </select></label>
       <label class="field"><span>Tonalitat</span>
         <select id="optKey"></select></label>
       <label class="field"><span>Referència</span>
         <select id="optRef">
-          <option value="cad">Cadència I–IV–V–I</option>
+          <option value="cad">Progressió pròpia del mode</option>
           <option value="scale">Escala ascendent</option>
           <option value="chord">Acord de tònica</option>
         </select></label>
@@ -167,6 +186,7 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
         <label class="check"><input type="checkbox" id="optOct"> Registre variable (octava avall o amunt)</label>
         <label class="check"><input type="checkbox" id="optDrone"> Bordó de tònica mentre respons</label>
         <label class="check"><input type="checkbox" id="optRefEach"> Referència a cada nota</label>
+        <label class="check"><input type="checkbox" id="optSing"> Canta el repòs abans de sentir-lo (micròfon)</label>
       </div>
       <div class="field"><span>Què es veu</span>
         <label class="check"><input type="checkbox" id="optShowRel"> Solfeig relatiu (Do Re Mi… a partir de la tònica)</label>
@@ -186,21 +206,30 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
 (function(){
 const NAMES=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
 const SOLFA=['Do','Re','Mi','Fa','Sol','La','Si','Do'];
-const MODES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,11],minorNat:[0,2,3,5,7,8,10]};
+const MODES={major:[0,2,4,5,7,9,11],minor:[0,2,3,5,7,8,11],minorNat:[0,2,3,5,7,8,10],
+  dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],lydian:[0,2,4,6,7,9,11],mixolydian:[0,2,4,5,7,9,10]};
 const CHROM={ // semitò → etiqueta, notes fora de l'escala de cada mode
   major:{1:'♭2',3:'♭3',6:'♯4',8:'♭6',10:'♭7'},
   minor:{1:'♭2',4:'♮3',6:'♯4',9:'♮6',10:'♭7'},
-  minorNat:{1:'♭2',4:'♮3',6:'♯4',9:'♮6',11:'♮7'}};
-const MODE_LABEL={major:'major',minor:'menor',minorNat:'menor'};
+  minorNat:{1:'♭2',4:'♮3',6:'♯4',9:'♮6',11:'♮7'},
+  dorian:{1:'♭2',4:'♮3',6:'♯4',8:'♭6',11:'♮7'},
+  phrygian:{2:'♮2',4:'♮3',6:'♯4',9:'♮6',11:'♮7'},
+  lydian:{1:'♭2',3:'♭3',5:'♮4',8:'♭6',10:'♭7'},
+  mixolydian:{1:'♭2',3:'♭3',6:'♯4',8:'♭6',11:'♮7'}};
+// Progressió de referència de cada mode (graus de l'acord)
+const CADS={major:[1,4,5,1],minor:[1,4,5,1],minorNat:[1,6,7,1],dorian:[1,4,7,1],phrygian:[1,2,7,1],lydian:[1,2,7,1],mixolydian:[1,7,4,1]};
+const MODAL=['dorian','phrygian','lydian','mixolydian','minorNat'];
+const MODE_LABEL={major:'major',minor:'menor',minorNat:'menor (eòlic)',dorian:'dòric',phrygian:'frigi',lydian:'lidi',mixolydian:'mixolidi'};
 const LEVELS=[
   {id:1,name:'1 · Inicial',desc:'Do major · 1, 3, 5',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,3,5],chrom:false,oct:false,drone:false,refEach:true}},
   {id:2,name:'2 · Bàsic',desc:'Do major · tots els graus',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true}},
   {id:3,name:'3 · Mitjà',desc:'Qualsevol tonalitat · registre variable',cfg:{mode:'major',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
   {id:4,name:'4 · Avançat',desc:'Major i menor barrejats',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
-  {id:5,name:'5 · Expert',desc:'+ notes cromàtiques',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:true,oct:true,drone:false,refEach:true}}];
+  {id:5,name:'5 · Expert',desc:'+ notes cromàtiques',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:true,oct:true,drone:false,refEach:true}},
+  {id:6,name:'6 · Modal',desc:'Dòric, frigi, lidi, mixolidi, eòlic',cfg:{mode:'modal',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true}}];
 const $=id=>document.getElementById(id);
 
-let st={level:1,showRel:true,showAbs:true,...LEVELS[0].cfg};
+let st={level:1,showRel:true,showAbs:true,sing:false,...LEVELS[0].cfg};
 let stats={ok:0,tot:0,streak:0,per:{}};
 try{const s=JSON.parse(localStorage.getItem('repos-cfg3')||'null');if(s)Object.assign(st,s);}catch(e){}
 try{const s=JSON.parse(localStorage.getItem('repos-stats2')||'null');if(s)Object.assign(stats,s);}catch(e){}
@@ -226,7 +255,7 @@ function newBus(){
     old.gain.linearRampToValueAtTime(0,t+.06);setTimeout(()=>{try{old.disconnect();}catch(e){}},300);}
   bus=ctx.createGain();bus.connect(master);
 }
-function stopAll(){clearTimers();if(ctx)newBus();document.querySelectorAll('.deg.lit').forEach(b=>b.classList.remove('lit'));}
+function stopAll(){clearTimers();stopSing();if(ctx)newBus();document.querySelectorAll('.deg.lit').forEach(b=>b.classList.remove('lit'));}
 function waitPiano(ms){return Promise.race([pianoReady||Promise.resolve(),new Promise(r=>setTimeout(r,ms))]);}
 const f=m=>440*Math.pow(2,(m-69)/12);
 function tone(m,t,dur,vel=.3){
@@ -260,7 +289,7 @@ function droneOff(){if(!droneNodes||!ctx)return;const {g,os}=droneNodes,t=ctx.cu
 
 // ---------- ronda ----------
 let round=null,timers=[],busy=false;
-const curMode=()=>round?round.mode:(st.mode==='mix'?'major':st.mode);
+const curMode=()=>round?round.mode:(st.mode==='mix'?'major':st.mode==='modal'?'dorian':st.mode);
 const scale=()=>MODES[curMode()];
 function clearTimers(){timers.forEach(clearTimeout);timers=[];}
 function at(sec,fn){timers.push(setTimeout(fn,Math.max(0,sec)*1000));}
@@ -274,7 +303,7 @@ function chordMidis(tonic,rootDeg){
 }
 function playRef(tonic,t0){
   const rel=x=>t0-ctx.currentTime+x;
-  if(st.ref==='cad'){[1,4,5,1].forEach((d,i)=>chordMidis(tonic,d).forEach(m=>tone(m,t0+i*.7,i===3?1.1:.62,.16)));return 3.3;}
+  if(st.ref==='cad'){CADS[curMode()].forEach((d,i)=>chordMidis(tonic,d).forEach(m=>tone(m,t0+i*.7,i===3?1.1:.62,.16)));return 3.3;}
   if(st.ref==='scale'){const sc=[...scale(),12];sc.forEach((s,i)=>{tone(tonic+s,t0+i*.28,i===7?.7:.26,.28);
       at(rel(i*.28),()=>light(s,true));at(rel(i*.28+.26),()=>light(s,false));});
     tone(tonic,t0+2.5,.9,.28);at(rel(2.5),()=>light(0,true));at(rel(3.3),()=>light(0,false));return 3.7;}
@@ -292,7 +321,7 @@ function newRound(){
   if(!piano&&!waitedPiano){waitedPiano=true;busy=true;setMsg('Carregant el so de piano…');
     waitPiano(6000).then(()=>{busy=false;newRound();});return;}
   stopAll();busy=false;
-  const mode=st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode;
+  const mode=st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode==='modal'?MODAL[Math.floor(Math.random()*MODAL.length)]:st.mode;
   let pc=st.key==='rand'?Math.floor(Math.random()*12):+st.key;
   const keyChanged=!round||round.pc!==pc||round.mode!==mode;
   const tonic=60+(pc>7?pc-12:pc);
@@ -320,7 +349,7 @@ function answer(s){
   btn(round.s).classList.add('right');if(!ok)btn(s).classList.add('wrong');
   const nm=st.showAbs?' ('+NAMES[(round.pc+round.s)%12]+')':'';
   setMsg((ok?'<strong>Correcte!</strong> Era el '+key:'<strong>No.</strong> Has dit '+labelOf(s)+', era el '+key)+nm+'. Escolta el camí cap al repòs.',ok?'ok':'bad');
-  playPath();$('bPath').disabled=false;
+  playPath(st.sing);$('bPath').disabled=false;
 }
 // Camí més curt per semitons: fins a 5 semitons baixa a l'1; 6 o més puja al 8.
 // Després de la nota de partida, segueix per les notes de l'escala.
@@ -330,13 +359,77 @@ function pathSemis(s){
   if(s<=5)return [s,...sc.filter(x=>x<s).reverse()];
   return [s,...sc.filter(x=>x>s),12];
 }
-function playPath(){
+function playPath(singFirst){
   if(!round)return;audio();stopAll();
-  const path=pathSemis(round.s),base=round.tonic+round.shift,t0=ctx.currentTime+.15,step=.5;
-  path.forEach((s,i)=>{const last=i===path.length-1,dur=last?1.3:.46;
+  const full=pathSemis(round.s),base=round.tonic+round.shift,t0=ctx.currentTime+.15,step=.5;
+  // Amb l'opció de cantar, el camí s'atura just abans de la tònica
+  const path=singFirst?full.slice(0,-1):full;
+  path.forEach((s,i)=>{const last=!singFirst&&i===path.length-1,dur=last?1.3:.46;
     tone(base+s,t0+i*step,dur,last?.34:.28);
     at(.15+i*step,()=>light(s,true));at(.15+i*step+dur,()=>light(s,false));});
+  if(singFirst){at(.15+path.length*step+.15,()=>startSing(full[full.length-1]));return;}
   chordMidis(round.tonic,1).forEach(m=>tone(m+round.shift,t0+path.length*step+.4,1.4,.12));
+}
+function playTonicEnd(endS){
+  audio();const base=round.tonic+round.shift,t0=ctx.currentTime+.05;
+  tone(base+endS,t0,1.3,.34);light(endS,true);at(1.35,()=>light(endS,false));
+  chordMidis(round.tonic,1).forEach(m=>tone(m+round.shift,t0+.9,1.4,.12));
+}
+
+// ---------- cantar el repòs (micròfon) ----------
+let mic=null,singState=null;
+async function getMic(){
+  if(mic)return mic;
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false}});
+  const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=2048;src.connect(an);
+  mic={stream,an,buf:new Float32Array(an.fftSize)};return mic;
+}
+function releaseMic(){if(mic){mic.stream.getTracks().forEach(t=>t.stop());mic=null;}}
+// Detecció de l'altura per autocorrelació normalitzada (NSDF)
+function detectPitch(b,sr){
+  const N=b.length;let rms=0;for(let i=0;i<N;i++)rms+=b[i]*b[i];rms=Math.sqrt(rms/N);if(rms<.01)return null;
+  const minL=Math.floor(sr/1100),maxL=Math.min(Math.floor(sr/65),(N>>1)-2),ns=new Float32Array(maxL+2);let gmax=0;
+  for(let L=minL;L<=maxL+1;L++){let r=0,m=0;for(let j=0;j<N-L;j++){const a=b[j],c=b[j+L];r+=a*c;m+=a*a+c*c;}
+    const v=m?2*r/m:0;ns[L]=v;if(L<=maxL&&v>gmax)gmax=v;}
+  if(gmax<.75)return null;
+  let L=minL+1;for(;L<=maxL;L++)if(ns[L]>=.9*gmax&&ns[L]>=ns[L-1]&&ns[L]>=ns[L+1])break;
+  if(L>maxL)return null;
+  const a=ns[L-1],c=ns[L+1],den=a-2*ns[L]+c,sh=den?.5*(a-c)/den:0;
+  return sr/(L+sh);
+}
+async function startSing(endS){
+  const r0=round;
+  $('sing').hidden=false;$('singBar').style.width='0';$('singNow').textContent='Activant el micròfon…';
+  try{await getMic();}catch(e){
+    $('sing').hidden=true;
+    setMsg($('msg').innerHTML+' <br>No s\'ha pogut fer servir el micròfon. Comprova el permís del navegador.');
+    if(round===r0)playTonicEnd(endS);return;}
+  if(round!==r0)return;
+  $('singNow').textContent='Escoltant…';
+  const HOLD=.6,TIMEOUT=15;let hold=0,last=performance.now(),start=last;
+  const id=setInterval(()=>{
+    const now=performance.now(),dt=(now-last)/1000;last=now;
+    mic.an.getFloatTimeDomainData(mic.buf);
+    const fr=detectPitch(mic.buf,ctx.sampleRate);
+    if(fr){
+      const midi=69+12*Math.log2(fr/440),rel=midi-round.tonic,near=Math.round(rel),cents=Math.round((rel-near)*100);
+      const pc=((near%12)+12)%12,lab=pc===0?'1 (tònica)':labelOf(pc);
+      const abs=st.showAbs?' · '+NAMES[(round.pc+pc)%12]:'';
+      const onT=pc===0&&Math.abs(cents)<35;
+      $('singNow').innerHTML=(onT?'':'<span class="far">')+'Cantes: grau '+lab+abs+' ('+(cents>0?'+':'')+cents+' cèntims)'+(onT?'':'</span>');
+      hold=onT?hold+dt:Math.max(0,hold-dt*.5);
+    }else hold=Math.max(0,hold-dt*.5);
+    $('singBar').style.width=Math.min(100,hold/HOLD*100)+'%';
+    if(hold>=HOLD)finishSing(true,endS);
+    else if((now-start)/1000>TIMEOUT)finishSing(false,endS);
+  },50);
+  singState={id,endS};
+}
+function stopSing(){if(singState){clearInterval(singState.id);singState=null;}const el=$('sing');if(el)el.hidden=true;}
+function finishSing(ok,endS){
+  stopSing();
+  setMsg(ok?'<strong>Has trobat el repòs!</strong> Escolta-ho.':'Escolta on era el repòs.',ok?'ok':'');
+  playTonicEnd(endS);
 }
 
 // ---------- UI ----------
@@ -390,7 +483,7 @@ function renderLevels(){
 function custom(){st.level=0;save();renderLevels();}
 function syncSettings(){
   $('optKey').value=st.key;$('optMode').value=st.mode;$('optRef').value=st.ref;
-  $('optChrom').checked=st.chrom;$('optOct').checked=st.oct;$('optDrone').checked=st.drone;$('optRefEach').checked=st.refEach;
+  $('optChrom').checked=st.chrom;$('optOct').checked=st.oct;$('optDrone').checked=st.drone;$('optRefEach').checked=st.refEach;$('optSing').checked=st.sing;
   $('optShowRel').checked=st.showRel;$('optShowAbs').checked=st.showAbs;applyLabels();
   for(let d=1;d<=7;d++)$('deg'+d).checked=st.degs.includes(d);
 }
@@ -408,6 +501,7 @@ function buildSettings(){
   $('optOct').onchange=e=>{st.oct=e.target.checked;custom();};
   $('optDrone').onchange=e=>{st.drone=e.target.checked;custom();if(!st.drone)droneOff();else if(round&&!round.answered)droneOn(round.tonic);};
   $('optRefEach').onchange=e=>{st.refEach=e.target.checked;custom();};
+  $('optSing').onchange=e=>{st.sing=e.target.checked;save();if(!st.sing){stopSing();releaseMic();}};
   $('optShowRel').onchange=e=>{st.showRel=e.target.checked;save();applyLabels();};
   $('optShowAbs').onchange=e=>{st.showAbs=e.target.checked;save();applyLabels();};
   syncSettings();
@@ -416,7 +510,8 @@ function buildSettings(){
 $('bNext').onclick=newRound;
 $('bNote').onclick=()=>{if(!busy)playNote(true);};
 $('bRef').onclick=()=>{if(!round||busy)return;audio();stopAll();busy=true;const w=playRef(round.tonic,ctx.currentTime+.08);at(w,()=>busy=false);};
-$('bPath').onclick=playPath;
+$('bPath').onclick=()=>playPath(false);
+$('bSingSkip').onclick=()=>{if(singState)finishSing(false,singState.endS);};
 $('bReset').onclick=()=>{stats={ok:0,tot:0,streak:0,per:{}};save();renderStats();};
 document.addEventListener('keydown',e=>{
   if(e.target.closest('select,input'))return;
