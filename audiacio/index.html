@@ -236,7 +236,23 @@ function at(sec,fn){timers.push(setTimeout(fn,Math.max(0,sec)*1000));}
 function stopAll(){timers.forEach(clearTimeout);timers=[];if(listenId){clearInterval(listenId);listenId=null;}if(ctx)newBus();}
 const pc12=x=>((x%12)+12)%12;
 const solfa=(s,mode)=>mode==='minor'?SOLF[pc12(s+9)]:SOLF[pc12(s)];
+// Repertori de patrons a l'estil de Gordon (semitons respecte de la tònica, major; el menor es deriva canviant la tercera).
+// Tònica: do mi sol amb sol greu i do agut. Dominant: sol greu, si greu, re, fa, sol.
+const GP={
+  T:{2:[[0,4],[4,0],[4,7],[7,4],[-5,0],[0,-5],[0,7],[7,0]],
+     3:[[0,4,7],[7,4,0],[0,4,0],[4,0,-5],[-5,0,4],[4,7,12],[12,7,4],[7,4,7],[4,0,4],[0,-5,0],[7,0,4],[4,7,4]],
+     4:[[0,4,7,12],[12,7,4,0],[-5,0,4,7],[7,4,0,-5],[0,4,7,4],[4,7,4,0],[-5,0,4,0]],
+     5:[[-5,0,4,7,12],[12,7,4,0,-5],[0,4,7,4,0],[7,4,0,4,7],[-5,0,4,7,4]]},
+  D:{2:[[-1,2],[2,-1],[-5,-1],[-1,-5],[2,5],[5,2],[7,5]],
+     3:[[-5,-1,2],[2,-1,-5],[5,2,-1],[-1,2,5],[7,5,2],[2,5,7],[-1,2,-1],[2,-1,2],[7,2,-1]],
+     4:[[-5,-1,2,5],[5,2,-1,-5],[7,5,2,-1],[-1,2,5,7],[2,-1,-5,-1],[-5,-1,2,-1]],
+     5:[[-5,-1,2,5,7],[7,5,2,-1,-5],[-1,2,5,2,-1],[2,-1,-5,-1,2]]}};
 function genPattern(mode,func,len,prev){
+  const list=GP[func][len].map(p=>mode==='minor'&&func==='T'?p.map(x=>x===4?3:x):p.slice());
+  const opts=prev?list.filter(p=>p.join()!==prev.join()):list;
+  return opts[Math.floor(Math.random()*opts.length)];
+}
+function genPatternOld(mode,func,len,prev){
   const pool=POOLS[mode][func],def=DEFINES[func][mode];
   for(let tries=0;tries<400;tries++){
     const seq=[pool[Math.floor(Math.random()*pool.length)]];
