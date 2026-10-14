@@ -9,3 +9,7 @@ Sona una referència de la tonalitat (cadència, escala o acord), després una n
 - Estadístiques d'encerts per grau, guardades al navegador
 
 Obre-la a: https://laiagonzalezf-bit.github.io/Nota-de-repos/
+
+## Crèdits del so
+
+So de piano: mostres del [Salamander Grand Piano](https://archive.org/details/SalamanderGrandPianoV3) d'Alexander Holm, amb llicència [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), en la versió MP3 del projecte [Tone.js audio](https://github.com/Tonejs/audio).
