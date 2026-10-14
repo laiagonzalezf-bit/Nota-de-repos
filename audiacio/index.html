@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}img{max-width:100%}.toolnav{font-size:.9rem;margin:0}.toolnav a{color:inherit;font-weight:700}</style>
+<title>Patrons cantats</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="piano-base" content="../piano/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: una columna; els "espais" del patró són l'element central, el cicle escolta → silenci → canta guia la pàgina */
+:root{
+  --bg:#f1f2ee; --surface:#fdfdfa; --ink:#1c2430; --muted:#5d6672; --line:#d6d8d0;
+  --accent:#1f6f6b; --accent-soft:#d5e9e6; --tonic:#23506b; --tonic-soft:#d6e5ee;
+  --dom:#b5651d; --dom-soft:#f3e0cd;
+  --ok:#2f7d4f; --ok-soft:#d8eedf; --bad:#b33a3a; --bad-soft:#f4d9d9;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171b; --surface:#1a2026; --ink:#e8ebe6; --muted:#9aa3ac; --line:#2c343c;
+  --accent:#5cc3b9; --accent-soft:#183331; --tonic:#7fb5d4; --tonic-soft:#1d3240;
+  --dom:#eaa05c; --dom-soft:#3a2a1b;
+  --ok:#6cc890; --ok-soft:#1c3326; --bad:#ee7b7b; --bad-soft:#3d2224; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171b; --surface:#1a2026; --ink:#e8ebe6; --muted:#9aa3ac; --line:#2c343c;
+  --accent:#5cc3b9; --accent-soft:#183331; --tonic:#7fb5d4; --tonic-soft:#1d3240;
+  --dom:#eaa05c; --dom-soft:#3a2a1b;
+  --ok:#6cc890; --ok-soft:#1c3326; --bad:#ee7b7b; --bad-soft:#3d2224; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(1.7rem,6vw,2.3rem);line-height:1.05;margin:0;letter-spacing:-.02em;text-wrap:balance}
+header p{margin:.4rem 0 0;color:var(--muted);max-width:60ch}
+
+.lvgroup{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.lvrow{display:flex;flex-wrap:wrap;gap:6px}
+.lv{appearance:none;font:inherit;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;
+  padding:.45rem .75rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;text-align:left}
+.lv b{font-family:var(--display);font-size:.95rem}
+.lv small{font-size:.72rem;color:var(--muted)}
+.lv[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.lv:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.status{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.key{font-family:var(--display);font-weight:700;font-size:1.15rem}
+.score{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.95rem}
+.score b{color:var(--ink)}
+
+/* Fases del cicle */
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ph{border-radius:999px;padding:.35rem .5rem;text-align:center;font-size:.85rem;font-weight:700;color:var(--muted);background:var(--surface);border:1.5px solid var(--line)}
+.ph.on{color:var(--surface);background:var(--accent);border-color:var(--accent)}
+
+.stage{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;min-height:190px;justify-content:center}
+.big{font-family:var(--display);font-weight:800;font-size:clamp(1.4rem,6vw,2rem);text-align:center;line-height:1.1;text-wrap:balance}
+.sub{color:var(--muted);text-align:center;max-width:46ch}
+.sub strong{color:var(--ink)}
+.slots{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.slot{width:clamp(48px,14vw,64px);height:clamp(58px,17vw,76px);border-radius:12px;border:2px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--display);font-weight:800;font-size:1.5rem;font-variant-numeric:tabular-nums;transition:background .12s,border-color .12s,transform .12s}
+.slot small{font-family:var(--body);font-weight:400;font-size:.72rem;color:var(--muted)}
+.slot.play{border-style:solid;border-color:var(--accent);background:var(--accent-soft);transform:translateY(-4px)}
+.slot.ok{border-style:solid;border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.slot.bad{border-style:solid;border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.slot.ok small,.slot.bad small{color:inherit}
+.count{font-family:var(--display);font-weight:800;font-size:3rem;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.live{font-variant-numeric:tabular-nums;color:var(--muted);min-height:1.5em}
+.sol{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sol span{display:flex;flex-direction:column;align-items:center;padding:6px 10px;border-radius:10px;background:var(--bg);min-width:3.4em}
+.sol b{font-family:var(--display);font-size:1.15rem}
+.sol small{color:var(--muted);font-size:.75rem}
+.func{display:inline-block;padding:.1rem .55rem;border-radius:999px;font-size:.8rem;font-weight:700}
+.func.T{background:var(--tonic-soft);color:var(--tonic)} .func.D{background:var(--dom-soft);color:var(--dom)}
+.choice{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{appearance:none;font:inherit;font-weight:700;border-radius:999px;padding:.7rem 1.2rem;cursor:pointer;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.T{border-color:var(--tonic);color:var(--tonic)} .btn.D{border-color:var(--dom);color:var(--dom)}
+.btn:disabled{opacity:.4;cursor:default}
+
+details{border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.05rem}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.check input{accent-color:var(--accent);width:18px;height:18px;flex:none}
+.foot{font-size:.82rem;color:var(--muted)}
+.foot p{margin:.3rem 0}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:.82rem;cursor:pointer;padding:0}
+@media (prefers-reduced-motion:reduce){.slot{transition:none}.slot.play{transform:none}}
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <h1>Patrons cantats</h1>
+    <p>Escolta la tonalitat i un patró curt. Guarda'l dins el cap durant el silenci i després canta'l. El micròfon comprova cada nota.</p>
+  </header>
+
+  <div class="lvgroup">
+    <span class="lab">Nivell</span>
+    <div class="lvrow" id="levels"></div>
+  </div>
+
+  <div class="status">
+    <div class="key" id="keyLabel">Tonalitat: —</div>
+    <div class="score">cantats <b id="sSing">0/0</b> · funció <b id="sFunc">0/0</b></div>
+  </div>
+
+  <div class="phases" aria-hidden="true">
+    <div class="ph" id="ph1">1 · Escolta</div>
+    <div class="ph" id="ph2">2 · Silenci</div>
+    <div class="ph" id="ph3">3 · Canta</div>
+  </div>
+
+  <section class="stage" id="stage" aria-live="polite">
+    <div class="big">Prem Nova ronda</div>
+    <div class="sub">Sonarà la tonalitat (I–V7–I) i un patró. Cal permetre el micròfon. Si pots, fes servir auriculars.</div>
+  </section>
+
+  <div class="actions">
+    <button class="btn primary" id="bNew">Nova ronda</button>
+    <button class="btn" id="bAgain" disabled>Torna a escoltar el patró</button>
+    <button class="btn" id="bRef" disabled>Tonalitat</button>
+  </div>
+
+  <details>
+    <summary>Configuració personalitzada</summary>
+    <div class="settings">
+      <label class="field"><span class="lab">Mode</span>
+        <select id="optMode"><option value="major">Major</option><option value="minor">Menor (harmònic)</option><option value="mix">Major i menor barrejats</option></select></label>
+      <label class="field"><span class="lab">Tonalitat</span><select id="optKey"></select></label>
+      <label class="field"><span class="lab">Funció dels patrons</span>
+        <select id="optFunc"><option value="T">Només tònica</option><option value="D">Només dominant</option><option value="TD">Tònica i dominant</option></select></label>
+      <label class="field"><span class="lab">Notes del patró</span>
+        <select id="optLen"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+      <label class="field"><span class="lab">Silenci abans de cantar</span>
+        <select id="optWait"><option value="0">Sense silenci</option><option value="2">2 s</option><option value="4">4 s</option><option value="6">6 s</option></select></label>
+      <div class="field"><span class="lab">Opcions</span>
+        <label class="check"><input type="checkbox" id="optAsk"> Pregunta si el patró és de tònica o de dominant</label>
+        <label class="check"><input type="checkbox" id="optAbs"> Mostra els noms reals de les notes</label>
+      </div>
+    </div>
+  </details>
+
+  <div class="foot">
+    <p>El solfeig és relatiu: en major la tònica és Do i en menor és La, com a Gordon i Kodály. Pots cantar a l'octava que et vagi bé.</p>
+    <p>Les estadístiques es guarden en aquest navegador. <button class="linkbtn" id="bReset">Esborra-les</button></p>
+  </div>
+  <p class="toolnav">Altra eina: <a href="../">Nota de repòs →</a></p>
+</main>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const NAMES=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
+const SOLF=['Do','Do♯','Re','Mi♭','Mi','Fa','Fa♯','Sol','Sol♯','La','Si♭','Si'];
+const DEG={major:['1','♭2','2','♭3','3','4','♯4','5','♭6','6','♭7','7'],minor:['1','♭2','2','3','♮3','4','♯4','5','6','♮6','♭7','7']};
+// Notes possibles respecte de la tònica (semitons), dins un registre cantable
+const POOLS={major:{T:[-5,0,4,7,12],D:[-5,-1,2,5,7,11]},minor:{T:[-5,0,3,7,12],D:[-5,-1,2,5,7,11]}};
+const DEFINES={T:{major:[0,4,12],minor:[0,3,12]},D:{major:[-1,2,5,11],minor:[-1,2,5,11]}};
+const LEVELS=[
+  {id:1,name:'1 · Tònica',desc:'Major · 2 notes · sense silenci',cfg:{mode:'major',key:'rand',func:'T',len:2,wait:0,ask:false}},
+  {id:2,name:'2 · Tònica',desc:'Major · 3 notes · 2 s de silenci',cfg:{mode:'major',key:'rand',func:'T',len:3,wait:2,ask:false}},
+  {id:3,name:'3 · Tònica i dominant',desc:'Major · 3 notes · 2 s',cfg:{mode:'major',key:'rand',func:'TD',len:3,wait:2,ask:true}},
+  {id:4,name:'4 · Menor',desc:'Tònica i dominant · 3 notes · 4 s',cfg:{mode:'minor',key:'rand',func:'TD',len:3,wait:4,ask:true}},
+  {id:5,name:'5 · Barrejat',desc:'Major i menor · 4 notes · 4 s',cfg:{mode:'mix',key:'rand',func:'TD',len:4,wait:4,ask:true}},
+  {id:6,name:'6 · Llarg',desc:'Major i menor · 5 notes · 6 s',cfg:{mode:'mix',key:'rand',func:'TD',len:5,wait:6,ask:true}}];
+
+let st={level:1,abs:false,...LEVELS[0].cfg};
+let stats={sing:{ok:0,tot:0},func:{ok:0,tot:0}};
+try{const s=JSON.parse(localStorage.getItem('patrons-cfg1')||'null');if(s)Object.assign(st,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('patrons-stats1')||'null');if(s)Object.assign(stats,s);}catch(e){}
+const save=()=>{try{localStorage.setItem('patrons-cfg1',JSON.stringify(st));localStorage.setItem('patrons-stats1',JSON.stringify(stats));}catch(e){}};
+
+// ---------- àudio: piano (Salamander Grand Piano, CC BY 3.0) ----------
+const BASE=(document.querySelector('meta[name="piano-base"]')||{}).content||'piano/';
+const SAMPLE_LIST=[];
+for(let o=1;o<=6;o++)[['C',0],['Ds',3],['Fs',6],['A',9]].forEach(([n,s])=>SAMPLE_LIST.push({name:n+o,midi:12*(o+1)+s}));
+const rawSamples=Promise.all(SAMPLE_LIST.map(x=>fetch(BASE+x.name+'.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}).catch(()=>null)));
+let ctx,master,bus,piano=null,pianoReady=null;
+function audio(){
+  if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.5;
+    const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);newBus();
+    pianoReady=rawSamples.then(bufs=>Promise.all(bufs.map((b,i)=>b?new Promise(res=>ctx.decodeAudioData(b,d=>res({midi:SAMPLE_LIST[i].midi,buf:d}),()=>res(null))):null)))
+      .then(list=>{list=list.filter(Boolean);if(list.length)piano=list;}).catch(()=>{});}
+  if(ctx.state==='suspended')ctx.resume();return ctx;
+}
+function newBus(){
+  if(bus){const old=bus,t=ctx.currentTime;old.gain.cancelScheduledValues(t);old.gain.setValueAtTime(old.gain.value,t);
+    old.gain.linearRampToValueAtTime(0,t+.06);setTimeout(()=>{try{old.disconnect();}catch(e){}},300);}
+  bus=ctx.createGain();bus.connect(master);
+}
+const fq=m=>440*Math.pow(2,(m-69)/12);
+function tone(m,t,dur,vel=.3){
+  if(!piano){const o=ctx.createOscillator(),g=ctx.createGain();o.type='triangle';o.frequency.value=fq(m);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vel,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur+.3);
+    o.connect(g);g.connect(bus);o.start(t);o.stop(t+dur+.35);return;}
+  let best=piano[0];for(const p of piano)if(Math.abs(p.midi-m)<Math.abs(best.midi-m))best=p;
+  const src=ctx.createBufferSource(),g=ctx.createGain();src.buffer=best.buf;src.playbackRate.value=Math.pow(2,(m-best.midi)/12);
+  const v=Math.min(1,vel*2.4);g.gain.setValueAtTime(v,t);g.gain.setValueAtTime(v,t+dur);g.gain.exponentialRampToValueAtTime(.0001,t+dur+.45);
+  src.connect(g);g.connect(bus);src.start(t);src.stop(t+dur+.5);
+}
+
+// ---------- micròfon i detecció d'altura ----------
+let mic=null;
+async function getMic(){
+  if(mic)return mic;
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false}});
+  const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=2048;src.connect(an);
+  mic={stream,an,buf:new Float32Array(an.fftSize)};return mic;
+}
+function detectPitch(b,sr){
+  const N=b.length;let rms=0;for(let i=0;i<N;i++)rms+=b[i]*b[i];rms=Math.sqrt(rms/N);if(rms<.01)return null;
+  const minL=Math.floor(sr/1100),maxL=Math.min(Math.floor(sr/65),(N>>1)-2),ns=new Float32Array(maxL+2);let gmax=0;
+  for(let L=minL;L<=maxL+1;L++){let r=0,m=0;for(let j=0;j<N-L;j++){const a=b[j],c=b[j+L];r+=a*c;m+=a*a+c*c;}
+    const v=m?2*r/m:0;ns[L]=v;if(L<=maxL&&v>gmax)gmax=v;}
+  if(gmax<.75)return null;
+  let L=minL+1;for(;L<=maxL;L++)if(ns[L]>=.9*gmax&&ns[L]>=ns[L-1]&&ns[L]>=ns[L+1])break;
+  if(L>maxL)return null;
+  const a=ns[L-1],c=ns[L+1],den=a-2*ns[L]+c,sh=den?.5*(a-c)/den:0;
+  return sr/(L+sh);
+}
+
+// ---------- ronda ----------
+let round=null,timers=[],listenId=null;
+function at(sec,fn){timers.push(setTimeout(fn,Math.max(0,sec)*1000));}
+function stopAll(){timers.forEach(clearTimeout);timers=[];if(listenId){clearInterval(listenId);listenId=null;}if(ctx)newBus();}
+const pc12=x=>((x%12)+12)%12;
+const solfa=(s,mode)=>mode==='minor'?SOLF[pc12(s+9)]:SOLF[pc12(s)];
+function genPattern(mode,func,len,prev){
+  const pool=POOLS[mode][func],def=DEFINES[func][mode];
+  for(let tries=0;tries<400;tries++){
+    const seq=[pool[Math.floor(Math.random()*pool.length)]];
+    while(seq.length<len){const last=seq[seq.length-1];
+      const opts=pool.filter(x=>x!==last&&Math.abs(x-last)<=9);seq.push(opts[Math.floor(Math.random()*opts.length)]);}
+    if(!seq.some(x=>def.includes(x)))continue;
+    if(prev&&seq.join()===prev.join())continue;
+    return seq;
+  }
+  return pool.slice(0,len);
+}
+function setPhase(n){[1,2,3].forEach(i=>$('ph'+i).classList.toggle('on',i===n));}
+function stage(html){$('stage').innerHTML=html;}
+function slotsHtml(n){let h='<div class="slots">';for(let i=0;i<n;i++)h+='<div class="slot" id="slot'+i+'"></div>';return h+'</div>';}
+function keyText(){if(!round)return 'Tonalitat: —';return 'Tonalitat: '+(st.abs?NAMES[round.pc]+' ':'')+(round.mode==='major'?'major':'menor');}
+
+function playRefAt(t0){
+  const T=round.tonic,third=round.mode==='major'?4:3;
+  const I=[0,third,7].map(x=>T+x).concat(T-12),V7=[-1,2,5,7].map(x=>T+x).concat(T-17);
+  [I,V7,I].forEach((ch,i)=>ch.forEach(m=>tone(m,t0+i*.75,i===2?1.1:.65,.15)));
+  return 2.7;
+}
+function playPatternAt(t0,show){
+  const step=.6;
+  round.pat.forEach((s,i)=>{tone(round.tonic+s,t0+i*step,.55,.32);
+    if(show){at(t0-ctx.currentTime+i*step,()=>{const el=$('slot'+i);if(el)el.classList.add('play');});
+      at(t0-ctx.currentTime+i*step+.5,()=>{const el=$('slot'+i);if(el)el.classList.remove('play');});}});
+  return round.pat.length*step+.3;
+}
+let waited=false;
+async function newRound(){
+  audio();stopAll();
+  if(!piano&&!waited){waited=true;stage('<div class="big">Carregant el piano…</div>');await Promise.race([pianoReady,new Promise(r=>setTimeout(r,6000))]);}
+  const mode=st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode;
+  const pc=st.key==='rand'?Math.floor(Math.random()*12):+st.key;
+  const func=st.func==='TD'?(Math.random()<.5?'T':'D'):st.func;
+  const prev=round&&round.pat;
+  round={mode,pc,func,tonic:57+(pc>9?pc-12:pc),pat:genPattern(mode,func,st.len,prev),sung:[],phase:'listen'};
+  $('keyLabel').textContent=keyText();
+  $('bAgain').disabled=$('bRef').disabled=false;$('bNew').textContent='Següent';
+  listenFlow(true);
+}
+// Escolta (referència + patró) → silenci → canta
+function listenFlow(withRef){
+  stopAll();setPhase(1);round.sung=[];
+  stage('<div class="big">Escolta</div>'+slotsHtml(round.pat.length)+'<div class="sub">'+(withRef?'Primer la tonalitat, després el patró.':'El patró un altre cop.')+'</div>');
+  const t0=ctx.currentTime+.1;let t=0;
+  if(withRef)t=playRefAt(t0)+.5;
+  const d=playPatternAt(t0+t,true);
+  at(t+d,()=>silencePhase());
+}
+function silencePhase(){
+  const w=st.wait;
+  if(!w){singPhase();return;}
+  setPhase(2);
+  stage('<div class="big">Canta\'l per dins</div><div class="count" id="cnt">'+w+'</div><div class="sub">Sense fer so. Imagina el patró i on és la tònica.</div>');
+  for(let i=1;i<w;i++)at(i,()=>{const c=$('cnt');if(c)c.textContent=w-i;});
+  at(w,()=>singPhase());
+}
+async function singPhase(){
+  setPhase(3);
+  stage('<div class="big">Canta!</div>'+slotsHtml(round.pat.length)+'<div class="live" id="live">Activant el micròfon…</div>');
+  try{await getMic();}catch(e){selfCheck();return;}
+  $('live').textContent='Escoltant…';
+  const L=round.pat.length,sr=ctx.sampleRate;
+  let cand=null,candDur=0,lastReg=null,gap=1,start=performance.now(),lastRegAt=0,prevT=start;
+  listenId=setInterval(()=>{
+    const now=performance.now(),dt=(now-prevT)/1000;prevT=now;
+    mic.an.getFloatTimeDomainData(mic.buf);
+    const f=detectPitch(mic.buf,sr);
+    if(f){
+      const rel=69+12*Math.log2(f/440)-round.tonic,near=Math.round(rel),cents=Math.round((rel-near)*100),p=pc12(near);
+      $('live').textContent='Cantes: '+DEG[round.mode][p]+' · '+solfa(p,round.mode)+(st.abs?' ('+NAMES[(round.pc+p)%12]+')':'')+' · '+(cents>0?'+':'')+cents+' c';
+      if(Math.abs(cents)<45){
+        if(cand===p)candDur+=dt;else{cand=p;candDur=dt;}
+        if(candDur>=.2&&(p!==lastReg||gap>=.15)){register(p);lastReg=p;lastRegAt=now;gap=0;candDur=-99;}
+      }else{cand=null;candDur=0;}
+    }else{cand=null;candDur=0;gap+=dt;}
+    const n=round.sung.length;
+    if(n>=L||(n&&(now-lastRegAt)>4000)||(!n&&(now-start)>9000)){clearInterval(listenId);listenId=null;afterSing();}
+  },40);
+}
+function register(p){
+  const i=round.sung.length;if(i>=round.pat.length)return;
+  round.sung.push(p);
+  const el=$('slot'+i),ok=p===pc12(round.pat[i]);
+  if(el){el.classList.add(ok?'ok':'bad');el.innerHTML=DEG[round.mode][p]+'<small>'+solfa(p,round.mode)+'</small>';}
+}
+function afterSing(){
+  const ok=round.sung.length===round.pat.length&&round.sung.every((p,i)=>p===pc12(round.pat[i]));
+  round.singOk=ok;stats.sing.tot++;if(ok)stats.sing.ok++;save();renderStats();
+  if(st.ask&&st.func==='TD')askFunc();else reveal();
+}
+// Sense micròfon: autoavaluació
+function selfCheck(){
+  stage('<div class="big">Canta\'l en veu alta</div><div class="sub">No s\'ha pogut fer servir el micròfon. Canta el patró i després comprova\'l.</div><div class="choice"><button class="btn primary" id="bShow">Mostra la solució</button></div>');
+  $('bShow').onclick=()=>{
+    audio();stopAll();playPatternAt(ctx.currentTime+.1,false);
+    stage('<div class="big">Com ha anat?</div>'+solHtml()+'<div class="choice"><button class="btn" id="bYes">L\'he cantat bé</button><button class="btn" id="bNo">M\'he equivocat</button></div>');
+    const done=ok=>{round.singOk=ok;stats.sing.tot++;if(ok)stats.sing.ok++;save();renderStats();if(st.ask&&st.func==='TD')askFunc();else reveal();};
+    $('bYes').onclick=()=>done(true);$('bNo').onclick=()=>done(false);
+  };
+}
+function askFunc(){
+  stage('<div class="big">Era un patró de…</div><div class="choice"><button class="btn T" id="bT">Tònica</button><button class="btn D" id="bD">Dominant</button></div>');
+  const pick=f=>{const ok=f===round.func;round.funcOk=ok;stats.func.tot++;if(ok)stats.func.ok++;save();renderStats();reveal();};
+  $('bT').onclick=()=>pick('T');$('bD').onclick=()=>pick('D');
+}
+function solHtml(){
+  return '<div class="sol">'+round.pat.map(s=>'<span><b>'+solfa(s,round.mode)+'</b><small>'+(s<0?'↓':s>=12?'↑':'')+DEG[round.mode][pc12(s)]+(st.abs?' · '+NAMES[(round.pc+s+120)%12]:'')+'</small></span>').join('')+'</div>';
+}
+function reveal(){
+  setPhase(0);
+  const f=round.func==='T'?'<span class="func T">Tònica</span>':'<span class="func D">Dominant</span>';
+  let head;
+  if(round.singOk)head='<div class="big" style="color:var(--ok)">Molt bé!</div>';
+  else head='<div class="big">Gairebé</div>';
+  let extra='';
+  if(round.sung.length&&!round.singOk)extra='<div class="sub">Has cantat: <strong>'+round.sung.map(p=>solfa(p,round.mode)).join(' – ')+'</strong></div>';
+  if(round.funcOk===false)extra+='<div class="sub">La funció era una altra.</div>';
+  stage(head+solHtml()+'<div>'+f+'</div>'+extra+'<div class="choice"><button class="btn" id="bHear">Escolta\'l</button><button class="btn" id="bRetry">Torna a cantar</button></div>');
+  $('bHear').onclick=()=>{audio();stopAll();playPatternAt(ctx.currentTime+.1,false);};
+  $('bRetry').onclick=()=>{round.funcOk=undefined;round.sung=[];silencePhase();};
+}
+
+function renderStats(){$('sSing').textContent=stats.sing.ok+'/'+stats.sing.tot;$('sFunc').textContent=stats.func.ok+'/'+stats.func.tot;}
+function renderLevels(){
+  const R=$('levels');R.innerHTML='';
+  LEVELS.forEach(l=>{const b=document.createElement('button');b.className='lv';b.setAttribute('aria-pressed',st.level===l.id);
+    b.innerHTML='<b>'+l.name+'</b><small>'+l.desc+'</small>';
+    b.onclick=()=>{stopAll();Object.assign(st,JSON.parse(JSON.stringify(l.cfg)),{level:l.id});save();round=null;setPhase(0);
+      sync();renderLevels();$('keyLabel').textContent=keyText();$('bAgain').disabled=$('bRef').disabled=true;$('bNew').textContent='Nova ronda';
+      stage('<div class="big">Nivell '+l.name.replace(/^\d · /,'').toLowerCase()+'</div><div class="sub">'+l.desc+'. Prem <strong>Nova ronda</strong>.</div>');};
+    R.appendChild(b);});
+  if(st.level===0){const s=document.createElement('button');s.className='lv';s.setAttribute('aria-pressed','true');s.disabled=true;
+    s.innerHTML='<b>Personalitzat</b><small>la teva configuració</small>';R.appendChild(s);}
+}
+function custom(){st.level=0;save();renderLevels();}
+function sync(){
+  $('optMode').value=st.mode;$('optKey').value=st.key;$('optFunc').value=st.func;$('optLen').value=String(st.len);
+  $('optWait').value=String(st.wait);$('optAsk').checked=st.ask;$('optAbs').checked=st.abs;
+}
+$('optKey').innerHTML='<option value="rand">Aleatòria a cada ronda</option>'+NAMES.map((n,i)=>'<option value="'+i+'">'+n+'</option>').join('');
+$('optMode').onchange=e=>{st.mode=e.target.value;custom();};
+$('optKey').onchange=e=>{st.key=e.target.value;custom();};
+$('optFunc').onchange=e=>{st.func=e.target.value;custom();};
+$('optLen').onchange=e=>{st.len=+e.target.value;custom();};
+$('optWait').onchange=e=>{st.wait=+e.target.value;custom();};
+$('optAsk').onchange=e=>{st.ask=e.target.checked;custom();};
+$('optAbs').onchange=e=>{st.abs=e.target.checked;save();$('keyLabel').textContent=keyText();};
+$('bNew').onclick=newRound;
+$('bAgain').onclick=()=>{if(round){audio();listenFlow(false);}};
+$('bRef').onclick=()=>{if(round){audio();stopAll();playRefAt(ctx.currentTime+.1);}};
+$('bReset').onclick=()=>{stats={sing:{ok:0,tot:0},func:{ok:0,tot:0}};save();renderStats();};
+sync();renderLevels();renderStats();
+})();
+</script>
+</body>
+</html>
