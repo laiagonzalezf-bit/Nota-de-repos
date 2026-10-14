@@ -193,7 +193,7 @@ const CHROM={ // semitò → etiqueta, notes fora de l'escala de cada mode
   minorNat:{1:'♭2',4:'♮3',6:'♯4',9:'♮6',11:'♮7'}};
 const MODE_LABEL={major:'major',minor:'menor',minorNat:'menor'};
 const LEVELS=[
-  {id:1,name:'1 · Inicial',desc:'Do major · 1, 3, 5',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,3,5],chrom:false,oct:false,drone:true,refEach:true}},
+  {id:1,name:'1 · Inicial',desc:'Do major · 1, 3, 5',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,3,5],chrom:false,oct:false,drone:false,refEach:true}},
   {id:2,name:'2 · Bàsic',desc:'Do major · tots els graus',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true}},
   {id:3,name:'3 · Mitjà',desc:'Qualsevol tonalitat · registre variable',cfg:{mode:'major',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
   {id:4,name:'4 · Avançat',desc:'Major i menor barrejats',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
@@ -202,9 +202,9 @@ const $=id=>document.getElementById(id);
 
 let st={level:1,showRel:true,showAbs:true,...LEVELS[0].cfg};
 let stats={ok:0,tot:0,streak:0,per:{}};
-try{const s=JSON.parse(localStorage.getItem('repos-cfg2')||'null');if(s)Object.assign(st,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('repos-cfg3')||'null');if(s)Object.assign(st,s);}catch(e){}
 try{const s=JSON.parse(localStorage.getItem('repos-stats2')||'null');if(s)Object.assign(stats,s);}catch(e){}
-const save=()=>{try{localStorage.setItem('repos-cfg2',JSON.stringify(st));localStorage.setItem('repos-stats2',JSON.stringify(stats));}catch(e){}};
+const save=()=>{try{localStorage.setItem('repos-cfg3',JSON.stringify(st));localStorage.setItem('repos-stats2',JSON.stringify(stats));}catch(e){}};
 
 // ---------- àudio ----------
 // Piano: mostres del Salamander Grand Piano (Alexander Holm, CC BY 3.0) cada tercera menor, transposades.
