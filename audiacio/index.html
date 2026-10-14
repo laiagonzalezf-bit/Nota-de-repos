@@ -168,7 +168,7 @@ const DEG={major:['1','♭2','2','♭3','3','4','♯4','5','♭6','6','♭7','7'
 const POOLS={major:{T:[-5,0,4,7,12],D:[-5,-1,2,5,7,11]},minor:{T:[-5,0,3,7,12],D:[-5,-1,2,5,7,11]}};
 const DEFINES={T:{major:[0,4,12],minor:[0,3,12]},D:{major:[-1,2,5,11],minor:[-1,2,5,11]}};
 const LEVELS=[
-  {id:1,name:'1 · Tònica',desc:'Major · 2 notes · sense silenci',cfg:{mode:'major',key:'rand',func:'T',len:2,wait:0,ask:false}},
+  {id:1,name:'1 · Tònica',desc:'Major · 3 notes · sense silenci',cfg:{mode:'major',key:'rand',func:'T',len:3,wait:0,ask:false}},
   {id:2,name:'2 · Tònica',desc:'Major · 3 notes · 2 s de silenci',cfg:{mode:'major',key:'rand',func:'T',len:3,wait:2,ask:false}},
   {id:3,name:'3 · Tònica i dominant',desc:'Major · 3 notes · 2 s',cfg:{mode:'major',key:'rand',func:'TD',len:3,wait:2,ask:true}},
   {id:4,name:'4 · Menor',desc:'Tònica i dominant · 3 notes · 4 s',cfg:{mode:'minor',key:'rand',func:'TD',len:3,wait:4,ask:true}},
@@ -177,9 +177,9 @@ const LEVELS=[
 
 let st={level:1,abs:false,...LEVELS[0].cfg};
 let stats={sing:{ok:0,tot:0},func:{ok:0,tot:0}};
-try{const s=JSON.parse(localStorage.getItem('patrons-cfg1')||'null');if(s)Object.assign(st,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('patrons-cfg2')||'null');if(s)Object.assign(st,s);}catch(e){}
 try{const s=JSON.parse(localStorage.getItem('patrons-stats1')||'null');if(s)Object.assign(stats,s);}catch(e){}
-const save=()=>{try{localStorage.setItem('patrons-cfg1',JSON.stringify(st));localStorage.setItem('patrons-stats1',JSON.stringify(stats));}catch(e){}};
+const save=()=>{try{localStorage.setItem('patrons-cfg2',JSON.stringify(st));localStorage.setItem('patrons-stats1',JSON.stringify(stats));}catch(e){}};
 
 // ---------- àudio: piano (Salamander Grand Piano, CC BY 3.0) ----------
 const BASE=(document.querySelector('meta[name="piano-base"]')||{}).content||'piano/';
@@ -241,7 +241,11 @@ function genPattern(mode,func,len,prev){
   for(let tries=0;tries<400;tries++){
     const seq=[pool[Math.floor(Math.random()*pool.length)]];
     while(seq.length<len){const last=seq[seq.length-1];
-      const opts=pool.filter(x=>x!==last&&Math.abs(x-last)<=9);seq.push(opts[Math.floor(Math.random()*opts.length)]);}
+      // Moviment per notes properes de l'acord: salt màxim d'una quinta i cap tríton
+      const opts=pool.filter(x=>{const d=Math.abs(x-last);return x!==last&&d<=7&&d!==6;});
+      if(!opts.length)break;seq.push(opts[Math.floor(Math.random()*opts.length)]);}
+    if(seq.length<len)continue;
+    if(Math.max(...seq)-Math.min(...seq)>12)continue;
     if(!seq.some(x=>def.includes(x)))continue;
     if(prev&&seq.join()===prev.join())continue;
     return seq;

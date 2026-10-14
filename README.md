@@ -19,6 +19,6 @@ So de piano: mostres del [Salamander Grand Piano](https://archive.org/details/Sa
 
 ## Patrons cantats (audiació)
 
-A `/audiacio/` hi ha una segona eina, basada en els patrons tonals de Gordon: se sent la tonalitat (I–V7–I) i un patró de tònica o de dominant, hi ha uns segons de silenci per audiar-lo i després s'ha de cantar. El micròfon comprova cada nota (a qualsevol octava) i al final es mostra el solfeig relatiu (menor en La). Té sis nivells, de 2 notes de tònica sense silenci fins a 5 notes amb 6 s de silenci.
+A `/audiacio/` hi ha una segona eina, basada en els patrons tonals de Gordon: se sent la tonalitat (I–V7–I) i un patró de tònica o de dominant, hi ha uns segons de silenci per audiar-lo i després s'ha de cantar. El micròfon comprova cada nota (a qualsevol octava) i al final es mostra el solfeig relatiu (menor en La). Té sis nivells, de 3 notes de tònica sense silenci fins a 5 notes amb 6 s de silenci.
 
 Obre-la a: https://laiagonzalezf-bit.github.io/Nota-de-repos/audiacio/
