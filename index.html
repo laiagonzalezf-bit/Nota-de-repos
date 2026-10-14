@@ -76,6 +76,8 @@ header p{margin:.4rem 0 0;color:var(--muted);max-width:60ch}
 .deg.wrong{background:var(--bad-soft);border-color:var(--bad)}
 .deg.lit.right,.deg.lit.wrong{background:var(--accent);border-color:var(--accent)}
 .hint{font-size:.82rem;color:var(--muted);margin:-10px 0 0}
+body.hide-rel .deg .s{display:none}
+body.hide-abs .deg .nm{display:none}
 
 .actions{display:flex;flex-wrap:wrap;gap:8px}
 .btn{appearance:none;font:inherit;font-weight:700;border-radius:999px;padding:.7rem 1.2rem;cursor:pointer;
@@ -166,6 +168,10 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
         <label class="check"><input type="checkbox" id="optDrone"> Bordó de tònica mentre respons</label>
         <label class="check"><input type="checkbox" id="optRefEach"> Referència a cada nota</label>
       </div>
+      <div class="field"><span>Què es veu</span>
+        <label class="check"><input type="checkbox" id="optShowRel"> Solfeig relatiu (Do Re Mi… a partir de la tònica)</label>
+        <label class="check"><input type="checkbox" id="optShowAbs"> Noms reals de les notes i tonalitat (absolut)</label>
+      </div>
     </div>
   </details>
 
@@ -194,7 +200,7 @@ const LEVELS=[
   {id:5,name:'5 · Expert',desc:'+ notes cromàtiques',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:true,oct:true,drone:false,refEach:true}}];
 const $=id=>document.getElementById(id);
 
-let st={level:1,...LEVELS[0].cfg};
+let st={level:1,showRel:true,showAbs:true,...LEVELS[0].cfg};
 let stats={ok:0,tot:0,streak:0,per:{}};
 try{const s=JSON.parse(localStorage.getItem('repos-cfg2')||'null');if(s)Object.assign(st,s);}catch(e){}
 try{const s=JSON.parse(localStorage.getItem('repos-stats2')||'null');if(s)Object.assign(stats,s);}catch(e){}
@@ -289,7 +295,7 @@ function newRound(){
   if(P.length>1&&s===prev)s=P[Math.floor(Math.random()*P.length)];
   let shift=0;if(st.oct){const r=Math.random();shift=r<.25?-12:r>.85?12:0;}
   Object.assign(round,{s,shift,note:tonic+s+shift});
-  $('keyLabel').textContent='Tonalitat: '+NAMES[pc]+' '+MODE_LABEL[mode];
+  setKeyLabel();
   renderLadder();resetLadder();droneOff();
   const t0=ctx.currentTime+.08;let wait=0;
   if(st.refEach||keyChanged){setMsg('Escolta la referència…');busy=true;wait=playRef(tonic,t0)+.5;}
@@ -305,8 +311,8 @@ function answer(s){
   stats.tot++;if(ok){stats.ok++;stats.streak++;}else stats.streak=0;
   const p=stats.per[key]||(stats.per[key]={ok:0,tot:0});p.tot++;if(ok)p.ok++;save();renderStats();
   btn(round.s).classList.add('right');if(!ok)btn(s).classList.add('wrong');
-  const nm=NAMES[(round.pc+round.s)%12];
-  setMsg((ok?'<strong>Correcte!</strong> Era el '+key:'<strong>No.</strong> Has dit '+labelOf(s)+', era el '+key)+' ('+nm+'). Escolta el camí cap al repòs.',ok?'ok':'bad');
+  const nm=st.showAbs?' ('+NAMES[(round.pc+round.s)%12]+')':'';
+  setMsg((ok?'<strong>Correcte!</strong> Era el '+key:'<strong>No.</strong> Has dit '+labelOf(s)+', era el '+key)+nm+'. Escolta el camí cap al repòs.',ok?'ok':'bad');
   playPath();$('bPath').disabled=false;
 }
 // Camí més curt per semitons: fins a 5 semitons baixa a l'1; 6 o més puja al 8.
@@ -327,6 +333,11 @@ function playPath(){
 }
 
 // ---------- UI ----------
+function setKeyLabel(){
+  if(!round){$('keyLabel').textContent='Tonalitat: —';return;}
+  $('keyLabel').textContent=st.showAbs?'Tonalitat: '+NAMES[round.pc]+' '+MODE_LABEL[round.mode]:'Mode '+MODE_LABEL[round.mode];
+}
+function applyLabels(){document.body.classList.toggle('hide-rel',!st.showRel);document.body.classList.toggle('hide-abs',!st.showAbs);setKeyLabel();}
 function setMsg(h,cls){const m=$('msg');m.innerHTML=h;m.className='msg'+(cls?' '+cls:'');}
 const btn=s=>document.querySelector('.deg[data-s="'+s+'"]');
 function light(s,on){const b=btn(s);if(b)b.classList.toggle('lit',on);}
@@ -373,6 +384,7 @@ function custom(){st.level=0;save();renderLevels();}
 function syncSettings(){
   $('optKey').value=st.key;$('optMode').value=st.mode;$('optRef').value=st.ref;
   $('optChrom').checked=st.chrom;$('optOct').checked=st.oct;$('optDrone').checked=st.drone;$('optRefEach').checked=st.refEach;
+  $('optShowRel').checked=st.showRel;$('optShowAbs').checked=st.showAbs;applyLabels();
   for(let d=1;d<=7;d++)$('deg'+d).checked=st.degs.includes(d);
 }
 function buildSettings(){
@@ -389,6 +401,8 @@ function buildSettings(){
   $('optOct').onchange=e=>{st.oct=e.target.checked;custom();};
   $('optDrone').onchange=e=>{st.drone=e.target.checked;custom();if(!st.drone)droneOff();else if(round&&!round.answered)droneOn(round.tonic);};
   $('optRefEach').onchange=e=>{st.refEach=e.target.checked;custom();};
+  $('optShowRel').onchange=e=>{st.showRel=e.target.checked;save();applyLabels();};
+  $('optShowAbs').onchange=e=>{st.showAbs=e.target.checked;save();applyLabels();};
   syncSettings();
 }
 
