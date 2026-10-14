@@ -8,4 +8,4 @@ Sona una referència de la tonalitat (cadència, escala o acord), després una n
 - Configuració personalitzada: mode, tonalitat, tipus de referència, graus, registre variable, bordó
 - Estadístiques d'encerts per grau, guardades al navegador
 
-Obre-la a: https://laiagonzalezf-bit.github.io/nota-de-repos/
+Obre-la a: https://laiagonzalezf-bit.github.io/Nota-de-repos/
