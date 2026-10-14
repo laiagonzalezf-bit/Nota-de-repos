@@ -36,7 +36,19 @@ header h1{font-family:var(--display);font-weight:800;font-size:clamp(1.7rem,6vw,
 header p{margin:.4rem 0 0;color:var(--muted);max-width:60ch}
 
 .levels{display:flex;flex-direction:column;gap:8px}
-.levels>span{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.levels{gap:12px}
+.lvgroup{display:flex;flex-direction:column;gap:6px}
+.lvgroup>span{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.refshow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--line)}
+.refshow .rl{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.chords{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chd{display:flex;flex-direction:column;align-items:center;min-width:3.2em;padding:4px 8px;border-radius:8px;border:1.5px solid var(--line);line-height:1.15;transition:background .12s,border-color .12s}
+.chd b{font-family:var(--display);font-size:1.05rem}
+.chd small{font-size:.72rem;color:var(--muted)}
+.chd.on{background:var(--accent);border-color:var(--accent)}
+.chd.on b,.chd.on small{color:var(--surface)}
+.chdash{color:var(--muted)}
+body.hide-abs .chd small{display:none}
 .lvrow{display:flex;flex-wrap:wrap;gap:6px}
 .lv{appearance:none;font:inherit;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;
   padding:.45rem .75rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;text-align:left}
@@ -126,15 +138,14 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
     <p>Escolta la referència de la tonalitat, després una nota sola. Digues quin grau és. En respondre, sentiràs el camí més curt d'aquella nota fins a la tònica.</p>
   </header>
 
-  <div class="levels">
-    <span>Nivell</span>
-    <div class="lvrow" id="levels"></div>
-  </div>
+  <div class="levels" id="levels"></div>
 
   <div class="status">
     <div class="key" id="keyLabel">Tonalitat: —</div>
     <div class="score"><b id="sOk">0</b>/<span id="sTot">0</span> encerts · ratxa <b id="sStreak">0</b></div>
   </div>
+
+  <div class="refshow" id="refShow" hidden><span class="rl" id="refLabel">Referència</span><div class="chords" id="refChords"></div></div>
 
   <div class="msg" id="msg">Tria un nivell i prem <strong>Nova nota</strong> (cal tenir el so activat).</div>
 
@@ -169,7 +180,17 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
           <option value="phrygian">Frigi</option>
           <option value="lydian">Lidi</option>
           <option value="mixolydian">Mixolidi</option>
-          <option value="modal">Modes barrejats (dòric, frigi, lidi, mixolidi, eòlic)</option>
+          <option value="c1">Contrast: major / mixolidi</option>
+          <option value="c2">Contrast: eòlic / dòric</option>
+          <option value="c3">Família major: major, lidi, mixolidi</option>
+          <option value="c4">Família menor: eòlic, dòric, frigi</option>
+          <option value="modal">Tots els modes</option>
+        </select></label>
+      <label class="field"><span>Canvi de mode (si n'hi ha més d'un)</span>
+        <select id="optBlock">
+          <option value="1">A cada nota</option>
+          <option value="5">Cada 5 notes</option>
+          <option value="10">Cada 10 notes</option>
         </select></label>
       <label class="field"><span>Tonalitat</span>
         <select id="optKey"></select></label>
@@ -186,6 +207,8 @@ select{font:inherit;padding:.5rem .6rem;border-radius:8px;border:1.5px solid var
         <label class="check"><input type="checkbox" id="optOct"> Registre variable (octava avall o amunt)</label>
         <label class="check"><input type="checkbox" id="optDrone"> Bordó de tònica mentre respons</label>
         <label class="check"><input type="checkbox" id="optRefEach"> Referència a cada nota</label>
+        <label class="check"><input type="checkbox" id="optShowRef"> Mostra la progressió de referència</label>
+        <label class="check"><input type="checkbox" id="optAnnounce"> Anuncia el mode</label>
         <label class="check"><input type="checkbox" id="optSing"> Canta el repòs abans de sentir-lo (micròfon)</label>
       </div>
       <div class="field"><span>Què es veu</span>
@@ -218,22 +241,40 @@ const CHROM={ // semitò → etiqueta, notes fora de l'escala de cada mode
   mixolydian:{1:'♭2',3:'♭3',6:'♯4',8:'♭6',11:'♮7'}};
 // Progressió de referència de cada mode (graus de l'acord)
 const CADS={major:[1,4,5,1],minor:[1,4,5,1],minorNat:[1,6,7,1],dorian:[1,4,7,1],phrygian:[1,2,7,1],lydian:[1,2,7,1],mixolydian:[1,7,4,1]};
-const MODAL=['dorian','phrygian','lydian','mixolydian','minorNat'];
-const MODE_LABEL={major:'major',minor:'menor',minorNat:'menor (eòlic)',dorian:'dòric',phrygian:'frigi',lydian:'lidi',mixolydian:'mixolidi'};
+// Grups de modes, ordenats per contrast (Gordon): primer parelles que difereixen en una nota
+const MODE_GROUPS={mix:['major','minor'],c1:['major','mixolydian'],c2:['minorNat','dorian'],
+  c3:['major','lydian','mixolydian'],c4:['minorNat','dorian','phrygian'],
+  modal:['major','lydian','mixolydian','minorNat','dorian','phrygian']};
+const NUMS=['I','II','III','IV','V','VI','VII'],MAJ=[0,2,4,5,7,9,11];
+function chordInfo(mode,d,pc){
+  const sc=MODES[mode],r=sc[d-1],t=(sc[d%7]-r+12)%12,f5=(sc[(d+3)%7]-r+12)%12;
+  const t3=(sc[(d+1)%7]-r+12)%12;
+  const q=t3===4?(f5===8?'aug':'maj'):(f5===6?'dim':'min');
+  const diff=r-MAJ[d-1],acc=diff<0?'♭':diff>0?'♯':'';
+  const sym=q==='min'?'m':q==='dim'?'°':q==='aug'?'+':'';
+  const num=acc+(q==='maj'||q==='aug'?NUMS[d-1]:NUMS[d-1].toLowerCase())+(q==='dim'?'°':q==='aug'?'+':'');
+  return {num,abs:NAMES[(pc+r)%12]+sym};
+}
+const cap=x=>x.charAt(0).toUpperCase()+x.slice(1);
+const MODE_LABEL={major:'major (jònic)',minor:'menor harmònic',minorNat:'menor (eòlic)',dorian:'dòric',phrygian:'frigi',lydian:'lidi',mixolydian:'mixolidi'};
 const LEVELS=[
-  {id:1,name:'1 · Inicial',desc:'Do major · 1, 3, 5',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,3,5],chrom:false,oct:false,drone:false,refEach:true}},
-  {id:2,name:'2 · Bàsic',desc:'Do major · tots els graus',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true}},
-  {id:3,name:'3 · Mitjà',desc:'Qualsevol tonalitat · registre variable',cfg:{mode:'major',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
-  {id:4,name:'4 · Avançat',desc:'Major i menor barrejats',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true}},
-  {id:5,name:'5 · Expert',desc:'+ notes cromàtiques',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:true,oct:true,drone:false,refEach:true}},
-  {id:6,name:'6 · Modal',desc:'Dòric, frigi, lidi, mixolidi, eòlic',cfg:{mode:'modal',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true}}];
+  {id:1,name:'1 · Inicial',desc:'Do major · 1, 3, 5',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,3,5],chrom:false,oct:false,drone:false,refEach:true,announce:true,showRef:true,block:1}},
+  {id:2,name:'2 · Bàsic',desc:'Do major · tots els graus',cfg:{mode:'major',key:'0',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true,announce:true,showRef:true,block:1}},
+  {id:3,name:'3 · Mitjà',desc:'Qualsevol tonalitat · registre variable',cfg:{mode:'major',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true,announce:true,showRef:true,block:1}},
+  {id:4,name:'4 · Avançat',desc:'Major i menor barrejats',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:false,oct:true,drone:false,refEach:true,announce:true,showRef:true,block:1}},
+  {id:5,name:'5 · Expert',desc:'+ notes cromàtiques',cfg:{mode:'mix',key:'rand',ref:'chord',degs:[1,2,3,4,5,6,7],chrom:true,oct:true,drone:false,refEach:true,announce:true,showRef:true,block:1}},
+  {id:6,group:'modal',name:'6 · Major / mixolidi',desc:'Una nota de diferència · blocs de 10',cfg:{mode:'c1',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true,announce:true,showRef:true,block:10}},
+  {id:7,group:'modal',name:'7 · Eòlic / dòric',desc:'Una nota de diferència · blocs de 10',cfg:{mode:'c2',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true,announce:true,showRef:true,block:10}},
+  {id:8,group:'modal',name:'8 · Família major',desc:'Major, lidi, mixolidi · blocs de 5',cfg:{mode:'c3',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true,announce:true,showRef:true,block:5}},
+  {id:9,group:'modal',name:'9 · Família menor',desc:'Eòlic, dòric, frigi · blocs de 5',cfg:{mode:'c4',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true,announce:true,showRef:true,block:5}},
+  {id:10,group:'modal',name:'10 · Tots els modes',desc:'Barrejats i sense anunciar',cfg:{mode:'modal',key:'rand',ref:'cad',degs:[1,2,3,4,5,6,7],chrom:false,oct:false,drone:false,refEach:true,announce:false,showRef:false,block:1}}];
 const $=id=>document.getElementById(id);
 
-let st={level:1,showRel:true,showAbs:true,sing:false,...LEVELS[0].cfg};
+let st={level:1,showRel:true,showAbs:true,sing:false,announce:true,showRef:true,block:1,...LEVELS[0].cfg};
 let stats={ok:0,tot:0,streak:0,per:{}};
-try{const s=JSON.parse(localStorage.getItem('repos-cfg3')||'null');if(s)Object.assign(st,s);}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('repos-cfg4')||'null');if(s)Object.assign(st,s);}catch(e){}
 try{const s=JSON.parse(localStorage.getItem('repos-stats2')||'null');if(s)Object.assign(stats,s);}catch(e){}
-const save=()=>{try{localStorage.setItem('repos-cfg3',JSON.stringify(st));localStorage.setItem('repos-stats2',JSON.stringify(stats));}catch(e){}};
+const save=()=>{try{localStorage.setItem('repos-cfg4',JSON.stringify(st));localStorage.setItem('repos-stats2',JSON.stringify(stats));}catch(e){}};
 
 // ---------- àudio ----------
 // Piano: mostres del Salamander Grand Piano (Alexander Holm, CC BY 3.0) cada tercera menor, transposades.
@@ -289,7 +330,16 @@ function droneOff(){if(!droneNodes||!ctx)return;const {g,os}=droneNodes,t=ctx.cu
 
 // ---------- ronda ----------
 let round=null,timers=[],busy=false;
-const curMode=()=>round?round.mode:(st.mode==='mix'?'major':st.mode==='modal'?'dorian':st.mode);
+const curMode=()=>round?round.mode:(MODE_GROUPS[st.mode]?MODE_GROUPS[st.mode][0]:st.mode);
+let blk=null;
+function pickMode(){
+  const g=MODE_GROUPS[st.mode];if(!g){blk=null;return {mode:st.mode,fresh:false};}
+  const rnd=a=>a[Math.floor(Math.random()*a.length)];
+  if(st.block<=1){blk=null;return {mode:rnd(g),fresh:false};}
+  let fresh=false;
+  if(!blk||blk.n>=st.block||!g.includes(blk.mode)){const opts=blk&&g.length>1?g.filter(m=>m!==blk.mode):g;blk={mode:rnd(opts),n:0};fresh=true;}
+  blk.n++;return {mode:blk.mode,fresh};
+}
 const scale=()=>MODES[curMode()];
 function clearTimers(){timers.forEach(clearTimeout);timers=[];}
 function at(sec,fn){timers.push(setTimeout(fn,Math.max(0,sec)*1000));}
@@ -303,11 +353,31 @@ function chordMidis(tonic,rootDeg){
 }
 function playRef(tonic,t0){
   const rel=x=>t0-ctx.currentTime+x;
-  if(st.ref==='cad'){CADS[curMode()].forEach((d,i)=>chordMidis(tonic,d).forEach(m=>tone(m,t0+i*.7,i===3?1.1:.62,.16)));return 3.3;}
+  if(st.ref==='cad'){CADS[curMode()].forEach((d,i)=>{chordMidis(tonic,d).forEach(m=>tone(m,t0+i*.7,i===3?1.1:.62,.16));
+      at(rel(i*.7),()=>litChord(i));});at(rel(3.3),()=>litChord(-1));return 3.3;}
   if(st.ref==='scale'){const sc=[...scale(),12];sc.forEach((s,i)=>{tone(tonic+s,t0+i*.28,i===7?.7:.26,.28);
       at(rel(i*.28),()=>light(s,true));at(rel(i*.28+.26),()=>light(s,false));});
     tone(tonic,t0+2.5,.9,.28);at(rel(2.5),()=>light(0,true));at(rel(3.3),()=>light(0,false));return 3.7;}
-  chordMidis(tonic,1).forEach(m=>tone(m,t0,1.3,.18));return 1.7;
+  chordMidis(tonic,1).forEach(m=>tone(m,t0,1.3,.18));at(rel(0),()=>litChord(0));at(rel(1.6),()=>litChord(-1));return 1.7;
+}
+function litChord(i){document.querySelectorAll('#refChords .chd').forEach((c,k)=>c.classList.toggle('on',k===i));}
+// Mostra quina referència sona: progressió en graus (i acords absoluts si estan activats)
+function renderRef(){
+  const box=$('refShow');
+  if(!round){box.hidden=true;return;}
+  const vis=st.showRef||round.answered;box.hidden=!vis;if(!vis)return;
+  const modeKnown=st.announce||round.answered,m=round.mode;
+  const C=$('refChords');C.innerHTML='';
+  let label;
+  if(st.ref==='scale'){label='Escala'+(modeKnown?' · '+MODE_LABEL[m]:'');}
+  else{
+    const degs=st.ref==='cad'?CADS[m]:[1];
+    label=(st.ref==='cad'?'Progressió':'Acord de tònica')+(modeKnown?' · '+MODE_LABEL[m]:'');
+    degs.forEach((d,i)=>{if(i){const sp=document.createElement('span');sp.className='chdash';sp.textContent='–';C.appendChild(sp);}
+      const ci=chordInfo(m,d,round.pc),el=document.createElement('span');el.className='chd';
+      el.innerHTML='<b>'+ci.num+'</b><small>'+ci.abs+'</small>';C.appendChild(el);});
+  }
+  $('refLabel').textContent=label;
 }
 
 function pool(){
@@ -321,7 +391,7 @@ function newRound(){
   if(!piano&&!waitedPiano){waitedPiano=true;busy=true;setMsg('Carregant el so de piano…');
     waitPiano(6000).then(()=>{busy=false;newRound();});return;}
   stopAll();busy=false;
-  const mode=st.mode==='mix'?(Math.random()<.5?'major':'minor'):st.mode==='modal'?MODAL[Math.floor(Math.random()*MODAL.length)]:st.mode;
+  const pm=pickMode(),mode=pm.mode;
   let pc=st.key==='rand'?Math.floor(Math.random()*12):+st.key;
   const keyChanged=!round||round.pc!==pc||round.mode!==mode;
   const tonic=60+(pc>7?pc-12:pc);
@@ -334,7 +404,9 @@ function newRound(){
   setKeyLabel();
   renderLadder();resetLadder();droneOff();
   const t0=ctx.currentTime+.08;let wait=0;
-  if(st.refEach||keyChanged){setMsg('Escolta la referència…');busy=true;wait=playRef(tonic,t0)+.5;}
+  renderRef();
+  const intro=pm.fresh&&st.announce?'<strong>Nou bloc: '+MODE_LABEL[mode]+'</strong> ('+st.block+' notes). ':'';
+  if(st.refEach||keyChanged||pm.fresh){setMsg(intro+'Escolta la referència…');busy=true;wait=playRef(tonic,t0)+.5;}
   at(wait,()=>{droneOn(tonic);playNote();busy=false;setMsg('Quin grau era?');enableAnswers(true);});
   $('bNote').disabled=$('bRef').disabled=false;$('bPath').disabled=true;$('bNext').textContent='Següent';
 }
@@ -342,7 +414,7 @@ function playNote(cut){if(!round)return;audio();if(cut)stopAll();tone(round.note
 
 function answer(s){
   if(!round||round.answered||busy)return;
-  round.answered=true;enableAnswers(false);
+  round.answered=true;enableAnswers(false);setKeyLabel();renderRef();
   const ok=s===round.s,key=labelOf(round.s);
   stats.tot++;if(ok){stats.ok++;stats.streak++;}else stats.streak=0;
   const p=stats.per[key]||(stats.per[key]={ok:0,tot:0});p.tot++;if(ok)p.ok++;save();renderStats();
@@ -435,9 +507,10 @@ function finishSing(ok,endS){
 // ---------- UI ----------
 function setKeyLabel(){
   if(!round){$('keyLabel').textContent='Tonalitat: —';return;}
-  $('keyLabel').textContent=st.showAbs?'Tonalitat: '+NAMES[round.pc]+' '+MODE_LABEL[round.mode]:'Mode '+MODE_LABEL[round.mode];
+  const known=st.announce||round.answered,ml=known?MODE_LABEL[round.mode]:'?';
+  $('keyLabel').textContent=st.showAbs?'Tonalitat: '+NAMES[round.pc]+' '+ml:'Mode: '+ml;
 }
-function applyLabels(){document.body.classList.toggle('hide-rel',!st.showRel);document.body.classList.toggle('hide-abs',!st.showAbs);setKeyLabel();}
+function applyLabels(){document.body.classList.toggle('hide-rel',!st.showRel);document.body.classList.toggle('hide-abs',!st.showAbs);setKeyLabel();renderRef();}
 function setMsg(h,cls){const m=$('msg');m.innerHTML=h;m.className='msg'+(cls?' '+cls:'');}
 const btn=s=>document.querySelector('.deg[data-s="'+s+'"]');
 function light(s,on){const b=btn(s);if(b)b.classList.toggle('lit',on);}
@@ -471,19 +544,22 @@ function renderStats(){
 }
 function renderLevels(){
   const R=$('levels');R.innerHTML='';
+  const groups={};[['tonal','Nivells · tonal'],['modal','Nivells · modes']].forEach(([k,t])=>{
+    const g=document.createElement('div');g.className='lvgroup';g.innerHTML='<span>'+t+'</span><div class="lvrow"></div>';R.appendChild(g);groups[k]=g.querySelector('.lvrow');});
   LEVELS.forEach(l=>{const b=document.createElement('button');b.className='lv';b.setAttribute('aria-pressed',st.level===l.id);
     b.innerHTML='<b>'+l.name+'</b><small>'+l.desc+'</small>';
-    b.onclick=()=>{stopAll();droneOff();busy=false;Object.assign(st,JSON.parse(JSON.stringify(l.cfg)),{level:l.id});if(!st.drone)droneOff();save();round=null;
+    b.onclick=()=>{stopAll();droneOff();busy=false;Object.assign(st,JSON.parse(JSON.stringify(l.cfg)),{level:l.id});blk=null;$('refShow').hidden=true;if(!st.drone)droneOff();save();round=null;
       syncSettings();renderLevels();renderLadder();setMsg('Nivell '+l.name.replace(/^\d · /,'').toLowerCase()+'. Prem <strong>Nova nota</strong>.');
       $('keyLabel').textContent='Tonalitat: —';$('bNote').disabled=$('bRef').disabled=$('bPath').disabled=true;$('bNext').textContent='Nova nota';};
-    R.appendChild(b);});
+    groups[l.group||'tonal'].appendChild(b);});
   if(st.level===0){const s=document.createElement('button');s.className='lv';s.setAttribute('aria-pressed','true');s.disabled=true;
-    s.innerHTML='<b>Personalitzat</b><small>la teva configuració</small>';R.appendChild(s);}
+    s.innerHTML='<b>Personalitzat</b><small>la teva configuració</small>';groups.tonal.appendChild(s);}
 }
 function custom(){st.level=0;save();renderLevels();}
 function syncSettings(){
   $('optKey').value=st.key;$('optMode').value=st.mode;$('optRef').value=st.ref;
   $('optChrom').checked=st.chrom;$('optOct').checked=st.oct;$('optDrone').checked=st.drone;$('optRefEach').checked=st.refEach;$('optSing').checked=st.sing;
+  $('optShowRef').checked=st.showRef;$('optAnnounce').checked=st.announce;$('optBlock').value=String(st.block);
   $('optShowRel').checked=st.showRel;$('optShowAbs').checked=st.showAbs;applyLabels();
   for(let d=1;d<=7;d++)$('deg'+d).checked=st.degs.includes(d);
 }
@@ -495,12 +571,15 @@ function buildSettings(){
     l.querySelector('input').addEventListener('change',e=>{st.degs=e.target.checked?[...st.degs,d].sort():st.degs.filter(x=>x!==d);custom();renderLadder();});
     D.appendChild(l);}
   $('optKey').onchange=e=>{st.key=e.target.value;custom();};
-  $('optMode').onchange=e=>{st.mode=e.target.value;round=null;custom();renderLadder();};
-  $('optRef').onchange=e=>{st.ref=e.target.value;custom();};
+  $('optMode').onchange=e=>{st.mode=e.target.value;round=null;blk=null;custom();renderLadder();renderRef();};
+  $('optRef').onchange=e=>{st.ref=e.target.value;custom();renderRef();};
   $('optChrom').onchange=e=>{st.chrom=e.target.checked;custom();renderLadder();};
   $('optOct').onchange=e=>{st.oct=e.target.checked;custom();};
   $('optDrone').onchange=e=>{st.drone=e.target.checked;custom();if(!st.drone)droneOff();else if(round&&!round.answered)droneOn(round.tonic);};
   $('optRefEach').onchange=e=>{st.refEach=e.target.checked;custom();};
+  $('optShowRef').onchange=e=>{st.showRef=e.target.checked;custom();renderRef();};
+  $('optAnnounce').onchange=e=>{st.announce=e.target.checked;custom();setKeyLabel();renderRef();};
+  $('optBlock').onchange=e=>{st.block=+e.target.value;blk=null;custom();};
   $('optSing').onchange=e=>{st.sing=e.target.checked;save();if(!st.sing){stopSing();releaseMic();}};
   $('optShowRel').onchange=e=>{st.showRel=e.target.checked;save();applyLabels();};
   $('optShowAbs').onchange=e=>{st.showAbs=e.target.checked;save();applyLabels();};

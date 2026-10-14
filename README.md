@@ -4,7 +4,9 @@ Eina d'entrenament auditiu per trobar el grau d'una nota respecte a la tònica.
 
 Sona una referència de la tonalitat (cadència, escala o acord), després una nota aïllada, i s'ha de dir quin grau és. En respondre, sona el camí més curt des d'aquella nota fins a la nota de repòs.
 
-- Sis nivells, d'inicial (Do major, graus 1-3-5) a expert (notes cromàtiques) i modal (dòric, frigi, lidi, mixolidi, eòlic, cadascun amb la seva progressió de referència)
+- Cinc nivells tonals, d'inicial (Do major, graus 1-3-5) a expert (notes cromàtiques)
+- Cinc nivells modals ordenats per contrast: major/mixolidi, eòlic/dòric, família major, família menor i tots barrejats; els modes canvien per blocs i s'anuncien fins a l'últim nivell
+- Es mostra la progressió de referència en graus (i en acords, si es vol) i s'il·lumina cada acord mentre sona
 - Opció de cantar el repòs: el camí s'atura abans de la tònica, l'estudiant la canta i el micròfon detecta si l'ha trobada
 - Configuració personalitzada: mode, tonalitat, tipus de referència, graus, registre variable, bordó
 - Estadístiques d'encerts per grau, guardades al navegador
